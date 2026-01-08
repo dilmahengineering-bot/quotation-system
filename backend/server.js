@@ -12,6 +12,19 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Quotation Management System API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      api: '/api'
+    }
+  });
+});
+
 // Routes
 app.use('/api', routes);
 
