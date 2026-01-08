@@ -20,9 +20,34 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       health: '/health',
-      api: '/api'
+      api: '/api',
+      setup: '/setup-db'
     }
   });
+});
+
+// Database setup route (for initial deployment)
+app.get('/setup-db', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const pool = require('./config/database');
+    
+    const schemaPath = path.join(__dirname, 'database', 'schema.sql');
+    const schema = fs.readFileSync(schemaPath, 'utf8');
+    
+    await pool.query(schema);
+    
+    res.json({ 
+      status: 'success', 
+      message: 'Database initialized successfully!' 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'error', 
+      message: error.message 
+    });
+  }
 });
 
 // Routes
