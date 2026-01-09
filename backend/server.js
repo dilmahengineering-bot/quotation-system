@@ -53,9 +53,24 @@ app.get('/setup-db', async (req, res) => {
 // Routes
 app.use('/api', routes);
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Quotation Management System API' });
+// Health check with database connectivity
+app.get('/health', async (req, res) => {
+  try {
+    const pool = require('./config/database');
+    const result = await pool.query('SELECT NOW()');
+    res.json({ 
+      status: 'OK', 
+      message: 'Quotation Management System API',
+      database: 'Connected',
+      timestamp: result.rows[0].now
+    });
+  } catch (error) {
+    res.status(503).json({ 
+      status: 'ERROR', 
+      message: 'Database connection failed',
+      error: error.message
+    });
+  }
 });
 
 // Error handling middleware
