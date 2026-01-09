@@ -1,5 +1,19 @@
 -- Database Schema for Quotation Management System
 
+-- Users Table
+CREATE TABLE IF NOT EXISTS users (
+    user_id SERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    role VARCHAR(50) DEFAULT 'user',
+    is_active BOOLEAN DEFAULT true,
+    last_login TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Machine Master Table
 CREATE TABLE IF NOT EXISTS machines (
     machine_id SERIAL PRIMARY KEY,
@@ -99,11 +113,11 @@ CREATE TABLE IF NOT EXISTS part_auxiliary_costs (
 );
 
 -- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_quotations_customer ON quotations(customer_id);
-CREATE INDEX IF NOT EXISTS idx_quotations_status ON quotations(quotation_status);
-CREATE INDEX IF NOT EXISTS idx_quotation_parts_quotation ON quotation_parts(quotation_id);
-CREATE INDEX IF NOT EXISTS idx_part_operations_part ON part_operations(part_id);
-CREATE INDEX IF NOT EXISTS idx_part_auxiliary_costs_part ON part_auxiliary_costs(part_id);
+CREATE INDEX idx_quotations_customer ON quotations(customer_id);
+CREATE INDEX idx_quotations_status ON quotations(quotation_status);
+CREATE INDEX idx_quotation_parts_quotation ON quotation_parts(quotation_id);
+CREATE INDEX idx_part_operations_part ON part_operations(part_id);
+CREATE INDEX idx_part_auxiliary_costs_part ON part_auxiliary_costs(part_id);
 
 -- Function to generate quote number
 CREATE OR REPLACE FUNCTION generate_quote_number()
@@ -144,3 +158,14 @@ INSERT INTO customers (company_name, address, contact_person_name, email, phone,
     ('ABC Manufacturing Ltd', '123 Industrial Ave, City', 'John Smith', 'john@abcmfg.com', '+1-555-0100', 'VAT123456'),
     ('XYZ Engineering Corp', '456 Tech Park, Town', 'Jane Doe', 'jane@xyzeng.com', '+1-555-0200', 'VAT789012')
 ON CONFLICT (company_name, email) DO NOTHING;
+
+-- Insert default admin user (password: admin123)
+-- Note: In production, change this password immediately!
+INSERT INTO users (username, password_hash, full_name, email, role) VALUES
+    ('admin', '$2a$10$rZ3QvJvKx.ZYKqXqR8K8qOZ5z7X0p6YtYvQGF.6xFy8JqHqy1.Q8W', 'System Administrator', 'admin@company.com', 'admin')
+ON CONFLICT (username) DO NOTHING;
+
+-- Insert sample regular user (password: user123)
+INSERT INTO users (username, password_hash, full_name, email, role) VALUES
+    ('user', '$2a$10$8qvZ8K7.d5xD3F.kJZ5L5.R7Y6.kR7X0p6YtYvQGF.6xFy8JqHqy2.Q', 'Regular User', 'user@company.com', 'user')
+ON CONFLICT (username) DO NOTHING;

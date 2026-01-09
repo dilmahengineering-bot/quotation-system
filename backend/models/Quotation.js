@@ -201,9 +201,7 @@ class Quotation {
   // Get quotation by ID with all details
   static async getById(id) {
     const quotationQuery = `
-      SELECT q.*, 
-             c.company_name, c.contact_person_name, c.email, c.phone, c.address,
-             q.quotation_status as status
+      SELECT q.*, c.company_name, c.contact_person_name, c.email, c.phone, c.address
       FROM quotations q
       LEFT JOIN customers c ON q.customer_id = c.customer_id
       WHERE q.quotation_id = $1
@@ -256,9 +254,7 @@ class Quotation {
   // Get all quotations
   static async getAll() {
     const query = `
-      SELECT q.*, 
-             c.company_name,
-             q.quotation_status as status
+      SELECT q.*, c.company_name
       FROM quotations q
       LEFT JOIN customers c ON q.customer_id = c.customer_id
       ORDER BY q.quotation_id DESC

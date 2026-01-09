@@ -1,5 +1,6 @@
 const Quotation = require('../models/Quotation');
-const PDFGenerator = require('../utils/pdfGenerator');
+const PDFExportService = require('../services/pdfExportService');
+const ExcelExportService = require('../services/excelExportService');
 
 const quotationController = {
   // Get all quotations
@@ -76,23 +77,56 @@ const quotationController = {
     }
   },
 
-  // Generate PDF
-  async generatePDF(req, res) {
+  // Export quotation as PDF
+  async exportPDF(req, res) {
     try {
       const quotation = await Quotation.getById(req.params.id);
       if (!quotation) {
         return res.status(404).json({ error: 'Quotation not found' });
       }
 
-      // Set response headers for PDF
+      const pdfBuffer = await PDFExportService.generateQuotationPDF(quotation);
+      
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=quotation-${quotation.quote_number}.pdf`);
-
-      // Generate PDF
-      await PDFGenerator.generateQuotationPDF(quotation, res);
+      res.setHeader('Content-Disposition', `attachment; filename="Quotation_${quotation.quote_number}.pdf"`);
+      res.send(pdfBuffer);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'Failed to generate PDF: ' + error.message });
+    }
+  },
+
+  // Export quotation as Excel
+  async exportExcel(req, res) {
+    try {
+      const quotation = await Quotation.getById(req.params.id);
+      if (!quotation) {
+        return res.status(404).json({ error: 'Quotation not found' });
+      }
+
+      const excelBuffer = ExcelExportService.generateQuotationExcel(quotation);
+      
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="Quotation_${quotation.quote_number}.xlsx"`);
+      res.send(excelBuffer);
+    } catch (error) {
+      console.error('Error generating Excel:', error);
+      res.status(500).json({ error: 'Failed to generate Excel: ' + error.message });
+    }
+  },
+
+  // Export quotations list as Excel
+  async exportListExcel(req, res) {
+    try {
+      const quotations = await Quotation.getAll();
+      const excelBuffer = ExcelExportService.generateQuotationListExcel(quotations);
+      
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="Quotations_List_${new Date().toISOString().split('T')[0]}.xlsx"`);
+      res.send(excelBuffer);
+    } catch (error) {
+      console.error('Error generating Excel list:', error);
+      res.status(500).json({ error: 'Failed to generate Excel: ' + error.message });
     }
   }
 };
