@@ -103,13 +103,6 @@ pool.query = async function(...args) {
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      // Validate connection health before query
-      if (!isHealthy && attempt === 1) {
-        console.log('⚠️  Connection health check before query...');
-        await pool.query('SELECT 1');
-        isHealthy = true;
-      }
-      
       const result = await originalQuery(...args);
       lastSuccessfulQuery = Date.now();
       isHealthy = true;
@@ -190,7 +183,7 @@ let heartbeatFailures = 0;
 const performHeartbeat = async () => {
   try {
     const start = Date.now();
-    await pool.query('SELECT 1 as heartbeat, NOW() as current_time');
+    await originalQuery.call(pool, 'SELECT 1 as heartbeat, NOW() as current_time');
     const duration = Date.now() - start;
     
     isHealthy = true;
@@ -211,8 +204,8 @@ const performHeartbeat = async () => {
     if (heartbeatFailures >= 3) {
       console.error('⚠️  Multiple heartbeat failures detected. Attempting connection recovery...');
       try {
-        // Force new connection by querying
-        await pool.query('SELECT version()');
+        // Force new connection by querying using originalQuery
+        await originalQuery.call(pool, 'SELECT version()');
         console.log('✅ Connection recovery successful');
         heartbeatFailures = 0;
         isHealthy = true;
