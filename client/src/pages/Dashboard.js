@@ -134,7 +134,7 @@ const Dashboard = () => {
                         <td>{quotation.company_name || 'N/A'}</td>
                         <td>
                           <span className={`badge ${getStatusBadgeClass(quotation.status)}`}>
-                            {quotation.status}
+                            {quotation.status || 'Draft'}
                           </span>
                         </td>
                         <td>

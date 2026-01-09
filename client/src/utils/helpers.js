@@ -60,6 +60,8 @@ export const calculateTotalHours = (hours, minutes) => {
 
 // Get status badge class
 export const getStatusBadgeClass = (status) => {
+  if (!status) return 'badge-draft';
+  
   const statusClasses = {
     'Draft': 'badge-draft',
     'Submitted': 'badge-submitted',
