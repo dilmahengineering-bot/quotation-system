@@ -99,11 +99,11 @@ CREATE TABLE IF NOT EXISTS part_auxiliary_costs (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_quotations_customer ON quotations(customer_id);
-CREATE INDEX idx_quotations_status ON quotations(quotation_status);
-CREATE INDEX idx_quotation_parts_quotation ON quotation_parts(quotation_id);
-CREATE INDEX idx_part_operations_part ON part_operations(part_id);
-CREATE INDEX idx_part_auxiliary_costs_part ON part_auxiliary_costs(part_id);
+CREATE INDEX IF NOT EXISTS idx_quotations_customer ON quotations(customer_id);
+CREATE INDEX IF NOT EXISTS idx_quotations_status ON quotations(quotation_status);
+CREATE INDEX IF NOT EXISTS idx_quotation_parts_quotation ON quotation_parts(quotation_id);
+CREATE INDEX IF NOT EXISTS idx_part_operations_part ON part_operations(part_id);
+CREATE INDEX IF NOT EXISTS idx_part_auxiliary_costs_part ON part_auxiliary_costs(part_id);
 
 -- Function to generate quote number
 CREATE OR REPLACE FUNCTION generate_quote_number()
