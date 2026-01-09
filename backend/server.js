@@ -58,6 +58,58 @@ app.get('/setup-db', async (req, res) => {
   }
 });
 
+// Create users table and add default users
+app.get('/create-users', async (req, res) => {
+  try {
+    const bcrypt = require('bcryptjs');
+    const pool = require('./config/database');
+    
+    // Create users table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        user_id SERIAL PRIMARY KEY,
+        username VARCHAR(50) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        full_name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        role VARCHAR(50) DEFAULT 'user',
+        is_active BOOLEAN DEFAULT true,
+        last_login TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Hash passwords
+    const adminHash = await bcrypt.hash('admin123', 10);
+    const userHash = await bcrypt.hash('user123', 10);
+
+    // Insert admin user
+    await pool.query(
+      `INSERT INTO users (username, password_hash, full_name, email, role) 
+       VALUES ($1, $2, $3, $4, $5) 
+       ON CONFLICT (username) DO UPDATE SET password_hash = $2`,
+      [adminHash, 'admin', 'System Administrator', 'admin@company.com', 'admin']
+    );
+
+    // Insert regular user
+    await pool.query(
+      `INSERT INTO users (username, password_hash, full_name, email, role) 
+       VALUES ($1, $2, $3, $4, $5) 
+       ON CONFLICT (username) DO UPDATE SET password_hash = $2`,
+      [userHash, 'user', 'Regular User', 'user@company.com', 'user']
+    );
+
+    res.json({ 
+      status: 'success', 
+      message: 'Users created! Login: admin/admin123 or user/user123' 
+    });
+  } catch (error) {
+    console.error('Create users error:', error);
+    res.status(500).json({ error: 'Failed to create users', details: error.message });
+  }
+});
+
 // Fix passwords endpoint (for Render deployment)
 app.get('/fix-passwords', async (req, res) => {
   try {
