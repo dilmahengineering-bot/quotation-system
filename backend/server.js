@@ -82,6 +82,10 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  
+  // Start keep-alive service for Render
+  const { startKeepAlive } = require('./utils/keepAlive');
+  startKeepAlive();
 });
 
 module.exports = app;

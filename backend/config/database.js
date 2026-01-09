@@ -143,7 +143,7 @@ setInterval(async () => {
   } catch (err) {
     console.error('💔 Database heartbeat failed:', err.message);
   }
-}, 60000); // Check every minute
+}, 5 * 60 * 1000); // Check every 5 minutes (increased frequency)
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
