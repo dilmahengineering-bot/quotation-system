@@ -1,24 +1,38 @@
 const { Pool } = require('pg');
 
+// Log environment info for debugging
+console.log('🔍 Database Configuration:');
+console.log('  DATABASE_URL exists:', !!process.env.DATABASE_URL);
+console.log('  DB_HOST:', process.env.DB_HOST || 'localhost');
+console.log('  DB_NAME:', process.env.DB_NAME || 'quotation_db');
+
 // Support both DATABASE_URL (Render) and individual env variables
-const poolConfig = process.env.DATABASE_URL 
-  ? {
-      connectionString: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false
-      }
-    }
-  : {
-      user: process.env.DB_USER || 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      database: process.env.DB_NAME || 'quotation_db',
-      password: process.env.DB_PASSWORD || 'postgres',
-      port: process.env.DB_PORT || 5432,
-      // Connection pool settings
-      max: 20, // Maximum number of clients in the pool
-      idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-      connectionTimeoutMillis: 10000, // Return error after 10 seconds if connection not established
-    };
+let poolConfig;
+
+if (process.env.DATABASE_URL) {
+  console.log('  Using DATABASE_URL for connection');
+  poolConfig = {
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false
+    },
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+  };
+} else {
+  console.log('  Using individual environment variables');
+  poolConfig = {
+    user: process.env.DB_USER || 'postgres',
+    host: process.env.DB_HOST || 'localhost',
+    database: process.env.DB_NAME || 'quotation_db',
+    password: process.env.DB_PASSWORD || 'postgres',
+    port: process.env.DB_PORT || 5432,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+  };
+}
 
 const pool = new Pool(poolConfig);
 
