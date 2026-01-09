@@ -89,7 +89,7 @@ app.get('/create-users', async (req, res) => {
       `INSERT INTO users (username, password_hash, full_name, email, role) 
        VALUES ($1, $2, $3, $4, $5) 
        ON CONFLICT (username) DO UPDATE SET password_hash = $2`,
-      [adminHash, 'admin', 'System Administrator', 'admin@company.com', 'admin']
+      ['admin', adminHash, 'System Administrator', 'admin@company.com', 'admin']
     );
 
     // Insert regular user
@@ -97,7 +97,7 @@ app.get('/create-users', async (req, res) => {
       `INSERT INTO users (username, password_hash, full_name, email, role) 
        VALUES ($1, $2, $3, $4, $5) 
        ON CONFLICT (username) DO UPDATE SET password_hash = $2`,
-      [userHash, 'user', 'Regular User', 'user@company.com', 'user']
+      ['user', userHash, 'Regular User', 'user@company.com', 'user']
     );
 
     res.json({ 
