@@ -125,7 +125,7 @@ const Quotations = () => {
                         <td>
                           <select
                             className="form-select"
-                            value={quotation.status}
+                            value={quotation.status || 'Draft'}
                             onChange={(e) => handleStatusChange(quotation.quotation_id, e.target.value)}
                             style={{ padding: '4px 24px 4px 8px', fontSize: '0.8rem', width: 'auto' }}
                           >

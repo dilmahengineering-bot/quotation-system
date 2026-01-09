@@ -5,7 +5,6 @@ const machineController = require('../controllers/machineController');
 const customerController = require('../controllers/customerController');
 const auxiliaryCostController = require('../controllers/auxiliaryCostController');
 const quotationController = require('../controllers/quotationController');
-const exportController = require('../controllers/exportController');
 
 // Machine routes
 router.get('/machines', machineController.getAll);
@@ -34,13 +33,10 @@ router.patch('/auxiliary-costs/:id/enable', auxiliaryCostController.enable);
 // Quotation routes
 router.get('/quotations', quotationController.getAll);
 router.get('/quotations/:id', quotationController.getById);
+router.get('/quotations/:id/pdf', quotationController.generatePDF);
 router.post('/quotations', quotationController.create);
 router.put('/quotations/:id', quotationController.update);
 router.patch('/quotations/:id/status', quotationController.updateStatus);
 router.delete('/quotations/:id', quotationController.delete);
-
-// Export routes
-router.get('/quotations/:id/export/pdf', exportController.exportPDF);
-router.get('/quotations/:id/export/excel', exportController.exportExcel);
 
 module.exports = router;
