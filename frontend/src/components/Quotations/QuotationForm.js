@@ -167,11 +167,12 @@ const QuotationForm = () => {
       [field]: value,
     };
     
-    // Auto-fill hourly rate when machine is selected
+    // Auto-fill hourly rate and machine name when machine is selected
     if (field === 'machineId') {
-      const machine = machines.find(m => m.machine_id === value);
+      const machine = machines.find(m => m.machine_id === parseInt(value));
       if (machine) {
         updated[partIndex].operations[opIndex].hourlyRate = machine.hourly_rate;
+        updated[partIndex].operations[opIndex].machineName = machine.machine_name;
       }
     }
     
@@ -543,7 +544,10 @@ const QuotationForm = () => {
                                   type="number"
                                   step="0.01"
                                   value={op.hourlyRate || op.hourly_rate || 0}
-                                  onChange={(e) => updateOperation(partIndex, opIndex, 'hourlyRate', e.target.value)}
+                                  readOnly
+                                  disabled
+                                  className="bg-gray-100"
+                                  title="Auto-populated from Machine Master"
                                 />
                                 <div className="flex items-center gap-2">
                                   <div className="flex-1 text-sm font-medium text-industrial-700">
