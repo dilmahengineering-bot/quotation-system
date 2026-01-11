@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const routes = require('./routes');
+const runMigrations = require('./migrations/run-migrations');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -48,9 +49,23 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+// Start server with migrations
+async function startServer() {
+  try {
+    // Run database migrations
+    await runMigrations();
+    console.log('✓ Database migrations completed');
+    
+    // Start the server
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 module.exports = app;
