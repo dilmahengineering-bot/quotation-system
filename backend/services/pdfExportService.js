@@ -3,6 +3,23 @@ const fs = require('fs');
 
 class PDFExportService {
   /**
+   * Format number with ISO pattern (thousand separators, 2 decimals)
+   */
+  static formatNumber(num) {
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(num || 0);
+  }
+
+  /**
+   * Format currency with ISO 4217 pattern (Currency Code + formatted number)
+   */
+  static formatCurrency(amount, currencyCode = 'LKR') {
+    return `${currencyCode} ${this.formatNumber(amount)}`;
+  }
+
+  /**
    * Generate PDF for quotation with professional industrial-grade layout
    * @param {Object} quotation - Complete quotation data
    * @param {String} outputPath - Path to save PDF
@@ -274,11 +291,11 @@ class PDFExportService {
         const partDisplayName = (part.part_number || part.part_name || 'Part').substring(0, 12);
         doc.text(partDisplayName, colX[0] + 3, y + 5, { width: colWidths[0] - 6 });
         doc.text(quantity.toString(), colX[1] + 3, y + 5, { width: colWidths[1] - 6, align: 'center' });
-        doc.text(`${unitMaterialCost.toFixed(2)}`, colX[2] + 3, y + 5, { width: colWidths[2] - 6, align: 'right' });
-        doc.text(`${unitOperationsCost.toFixed(2)}`, colX[3] + 3, y + 5, { width: colWidths[3] - 6, align: 'right' });
-        doc.text(`${unitAuxiliaryCost.toFixed(2)}`, colX[4] + 3, y + 5, { width: colWidths[4] - 6, align: 'right' });
+        doc.text(this.formatNumber(unitMaterialCost), colX[2] + 3, y + 5, { width: colWidths[2] - 6, align: 'right' });
+        doc.text(this.formatNumber(unitOperationsCost), colX[3] + 3, y + 5, { width: colWidths[3] - 6, align: 'right' });
+        doc.text(this.formatNumber(unitAuxiliaryCost), colX[4] + 3, y + 5, { width: colWidths[4] - 6, align: 'right' });
         
-        doc.font('Helvetica-Bold').text(`${partSubtotal.toFixed(2)}`, colX[5] + 3, y + 5, { width: colWidths[5] - 6, align: 'right' });
+        doc.font('Helvetica-Bold').text(this.formatNumber(partSubtotal), colX[5] + 3, y + 5, { width: colWidths[5] - 6, align: 'right' });
 
         // Row border
         doc.rect(leftColumn, y, tableWidth, 20)
@@ -322,10 +339,10 @@ class PDFExportService {
 
             doc.fontSize(8).font('Helvetica').fillColor('#000000');
             doc.text(machineName, leftColumn + 18, y + 3, { width: 150 });
-            doc.text(hours.toFixed(2), leftColumn + 180, y + 3, { width: 60, align: 'center' });
-            doc.text(`${quotation.currency} ${rate.toFixed(2)}`, leftColumn + 260, y + 3, { width: 70, align: 'right' });
-            doc.text(`${unitCost.toFixed(2)}`, leftColumn + 340, y + 3, { width: 50, align: 'right' });
-            doc.font('Helvetica-Bold').text(`${extCost.toFixed(2)}`, leftColumn + 400, y + 3, { width: 50, align: 'right' });
+            doc.text(this.formatNumber(hours), leftColumn + 180, y + 3, { width: 60, align: 'center' });
+            doc.text(this.formatCurrency(rate, quotation.currency), leftColumn + 260, y + 3, { width: 70, align: 'right' });
+            doc.text(this.formatNumber(unitCost), leftColumn + 340, y + 3, { width: 50, align: 'right' });
+            doc.font('Helvetica-Bold').text(this.formatNumber(extCost), leftColumn + 400, y + 3, { width: 50, align: 'right' });
             doc.rect(leftColumn + 15, y, 438, 14).stroke('#E0E0E0');
             y += 14;
           });
@@ -335,7 +352,7 @@ class PDFExportService {
           doc.rect(leftColumn + 15, y, 438, 16).fill('#E8F4F8');
           doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#0B5394');
           doc.text('Operations Subtotal:', leftColumn + 250, y + 4, { width: 140, align: 'right' });
-          doc.text(`${quotation.currency} ${extendedOperations.toFixed(2)}`, leftColumn + 400, y + 4, { width: 50, align: 'right' });
+          doc.text(this.formatCurrency(extendedOperations, quotation.currency), leftColumn + 400, y + 4, { width: 50, align: 'right' });
           doc.rect(leftColumn + 15, y, 438, 16).stroke('#0B5394');
           y += 16;
         }
@@ -375,7 +392,7 @@ class PDFExportService {
           doc.rect(leftColumn + 15, y, 438, 16).fill('#E8F5E9');
           doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#38761D');
           doc.text('Auxiliary Subtotal:', leftColumn + 280, y + 4, { width: 80, align: 'right' });
-          doc.text(`${quotation.currency} ${extendedAux.toFixed(2)}`, leftColumn + 370, y + 4, { width: 80, align: 'right' });
+          doc.text(this.formatCurrency(extendedAux, quotation.currency), leftColumn + 370, y + 4, { width: 80, align: 'right' });
           doc.rect(leftColumn + 15, y, 438, 16).stroke('#38761D');
           y += 16;
         }
@@ -422,7 +439,7 @@ class PDFExportService {
     doc.rect(tableX, y, tableWidth, 16).fill('#E8F4F8');
     doc.fontSize(9).font('Helvetica-Bold').fillColor('#0B5394');
     doc.text('BASE TOTAL (All Parts & Costs)', tableX + 10, y + 5, { width: colWidths[0] - 20 });
-    doc.text(`${quotation.currency} ${subtotal.toFixed(2)}`, tableX + colWidths[0] + 10, y + 5, { width: colWidths[1] - 20, align: 'right' });
+    doc.text(this.formatCurrency(subtotal, quotation.currency), tableX + colWidths[0] + 10, y + 5, { width: colWidths[1] - 20, align: 'right' });
     doc.rect(tableX, y, tableWidth, 16).stroke('#0B5394');
     y += 16;
 
@@ -437,7 +454,7 @@ class PDFExportService {
       doc.fontSize(8.5).font('Helvetica').fillColor('#333333');
       doc.text(`Less: Discount (${discountPercent.toFixed(1)}%)`, tableX + 10, y + 4, { width: colWidths[0] - 20 });
       doc.fillColor('#CC0000');
-      doc.text(`- ${quotation.currency} ${discountAmount.toFixed(2)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
+      doc.text(`- ${this.formatCurrency(discountAmount, quotation.currency)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
       doc.rect(tableX, y, tableWidth, 14).stroke('#E0E0E0');
       y += 14;
 
@@ -446,7 +463,7 @@ class PDFExportService {
       doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#333333');
       doc.text('= After Discount', tableX + 10, y + 4, { width: colWidths[0] - 20 });
       doc.fillColor('#000000');
-      doc.text(`${quotation.currency} ${afterDiscount.toFixed(2)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
+      doc.text(this.formatCurrency(afterDiscount, quotation.currency), tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
       doc.rect(tableX, y, tableWidth, 14).stroke('#D0D0D0');
       y += 14;
     }
@@ -461,7 +478,7 @@ class PDFExportService {
       doc.fontSize(8.5).font('Helvetica').fillColor('#333333');
       doc.text(`Add: Margin (${marginPercent.toFixed(1)}%)`, tableX + 10, y + 4, { width: colWidths[0] - 20 });
       doc.fillColor('#006600');
-      doc.text(`+ ${quotation.currency} ${marginAmount.toFixed(2)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
+      doc.text(`+ ${this.formatCurrency(marginAmount, quotation.currency)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
       doc.rect(tableX, y, tableWidth, 14).stroke('#E0E0E0');
       y += 14;
 
@@ -470,7 +487,7 @@ class PDFExportService {
       doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#333333');
       doc.text('= After Margin', tableX + 10, y + 4, { width: colWidths[0] - 20 });
       doc.fillColor('#000000');
-      doc.text(`${quotation.currency} ${afterMargin.toFixed(2)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
+      doc.text(this.formatCurrency(afterMargin, quotation.currency), tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
       doc.rect(tableX, y, tableWidth, 14).stroke('#D0D0D0');
       y += 14;
     }
@@ -485,7 +502,7 @@ class PDFExportService {
       doc.fontSize(8.5).font('Helvetica').fillColor('#333333');
       doc.text(`Add: VAT/Tax (${vatPercent.toFixed(1)}%)`, tableX + 10, y + 4, { width: colWidths[0] - 20 });
       doc.fillColor('#006600');
-      doc.text(`+ ${quotation.currency} ${vatAmount.toFixed(2)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
+      doc.text(`+ ${this.formatCurrency(vatAmount, quotation.currency)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
       doc.rect(tableX, y, tableWidth, 14).stroke('#E0E0E0');
       y += 14;
     }
@@ -495,7 +512,7 @@ class PDFExportService {
     doc.fontSize(11).font('Helvetica-Bold').fillColor('#FFFFFF');
     doc.text('TOTAL QUOTE VALUE', tableX + 10, y + 6, { width: colWidths[0] - 20 });
     doc.fontSize(12);
-    doc.text(`${quotation.currency} ${finalTotal.toFixed(2)}`, tableX + colWidths[0] + 10, y + 6, { width: colWidths[1] - 20, align: 'right' });
+    doc.text(this.formatCurrency(finalTotal, quotation.currency), tableX + colWidths[0] + 10, y + 6, { width: colWidths[1] - 20, align: 'right' });
     doc.rect(tableX, y, tableWidth, 20).stroke('#38761D');
 
     doc.moveDown(3);
