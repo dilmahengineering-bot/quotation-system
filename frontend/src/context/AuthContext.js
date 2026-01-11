@@ -75,9 +75,8 @@ export const AuthProvider = ({ children }) => {
     // Clear user state
     setUser(null);
     
-    // Perform full page reload to clear all cached data and state
-    window.location.href = '/login';
-    window.location.reload();
+    // Perform full page reload to login page
+    window.location.replace('/login');
   }, []);
 
   const changePassword = useCallback(async (currentPassword, newPassword) => {
