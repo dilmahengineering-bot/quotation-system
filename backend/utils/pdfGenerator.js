@@ -185,6 +185,9 @@ class PDFGenerator {
     doc.text('TOTAL QUOTE VALUE:', labelX, currentY);
     doc.text(`${quotation.currency} ${parseFloat(quotation.total_quote_value).toFixed(2)}`, valueX, currentY, { align: 'right' });
 
+    // Approval & Signature Section
+    this.addSignatureSection(doc, leftColumn);
+
     // Footer
     doc.fontSize(8).fillColor('#6c757d').font('Helvetica');
     doc.text(
@@ -218,6 +221,59 @@ class PDFGenerator {
        .text(title);
     doc.font('Helvetica').fillColor('#000');
     doc.moveDown(0.5);
+  }
+
+  static addSignatureSection(doc, leftColumn) {
+    // Check if we need a new page for signatures
+    if (doc.y > 550) {
+      doc.addPage();
+    } else {
+      doc.moveDown(3);
+    }
+
+    this.addSectionTitle(doc, 'APPROVAL & AUTHORIZATION');
+    doc.moveDown(1);
+
+    const signatureY = doc.y;
+    const columnWidth = 165;
+    const spacing = 165;
+
+    // Define three signature blocks
+    const approvers = [
+      { title: 'Workshop Manager', name: '' },
+      { title: 'Head of Engineering', name: '' },
+      { title: 'Finance Approval', name: '' }
+    ];
+
+    approvers.forEach((approver, index) => {
+      const xPos = leftColumn + (index * spacing);
+      const yPos = signatureY;
+
+      // Designation title
+      doc.fontSize(10).fillColor('#1e3c72').font('Helvetica-Bold')
+         .text(approver.title, xPos, yPos, { width: columnWidth - 10, align: 'left' });
+      
+      doc.fillColor('#000').font('Helvetica');
+
+      // Name field (optional)
+      if (approver.name) {
+        doc.fontSize(9).text(`Name: ${approver.name}`, xPos, yPos + 20, { width: columnWidth - 10 });
+      }
+
+      // Signature line
+      doc.fontSize(9).text('Signature:', xPos, yPos + 40);
+      doc.moveTo(xPos, yPos + 65)
+         .lineTo(xPos + columnWidth - 10, yPos + 65)
+         .stroke('#000000');
+
+      // Date line
+      doc.fontSize(9).text('Date:', xPos, yPos + 75);
+      doc.moveTo(xPos, yPos + 100)
+         .lineTo(xPos + columnWidth - 10, yPos + 100)
+         .stroke('#000000');
+    });
+
+    doc.moveDown(8);
   }
 }
 

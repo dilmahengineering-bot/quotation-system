@@ -26,6 +26,7 @@ class PDFExportService {
         this.addQuotationDetails(doc, quotation);
         this.addPartsTable(doc, quotation);
         this.addFinancialSummary(doc, quotation);
+        this.addSignatureSection(doc);
         this.addFooter(doc, quotation);
 
         // Finalize
@@ -296,6 +297,64 @@ class PDFExportService {
     
     doc.fontSize(14)
        .text(`${quotation.currency} ${parseFloat(quotation.total_quote_value).toFixed(2)}`, 480, y, { align: 'right' });
+  }
+
+  static addSignatureSection(doc) {
+    let y = doc.y;
+
+    // Check if we need a new page for signatures
+    if (y > 550) {
+      doc.addPage();
+      y = 50;
+    } else {
+      y += 30;
+    }
+
+    // Section title
+    doc.fontSize(14)
+       .fillColor('#1e3c72')
+       .text('APPROVAL & AUTHORIZATION', 50, y);
+
+    y += 30;
+
+    // Define three signature blocks
+    const approvers = [
+      { title: 'Workshop Manager', name: '' },
+      { title: 'Head of Engineering', name: '' },
+      { title: 'Finance Approval', name: '' }
+    ];
+
+    const columnWidth = 165;
+    const startX = 50;
+
+    approvers.forEach((approver, index) => {
+      const xPos = startX + (index * columnWidth);
+
+      // Designation title
+      doc.fontSize(10)
+         .fillColor('#1e3c72')
+         .text(approver.title, xPos, y, { width: columnWidth - 10 });
+
+      // Name field (optional - can be auto-filled if available)
+      doc.fontSize(9)
+         .fillColor('#000000');
+      
+      if (approver.name) {
+        doc.text(`Name: ${approver.name}`, xPos, y + 20);
+      }
+
+      // Signature line
+      doc.text('Signature:', xPos, y + 40);
+      doc.moveTo(xPos, y + 65)
+         .lineTo(xPos + columnWidth - 15, y + 65)
+         .stroke('#000000');
+
+      // Date line
+      doc.text('Date:', xPos, y + 75);
+      doc.moveTo(xPos, y + 100)
+         .lineTo(xPos + columnWidth - 15, y + 100)
+         .stroke('#000000');
+    });
   }
 
   static addFooter(doc, quotation) {
