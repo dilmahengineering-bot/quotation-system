@@ -107,7 +107,10 @@ CREATE TABLE IF NOT EXISTS part_auxiliary_costs (
     part_aux_id SERIAL PRIMARY KEY,
     part_id INTEGER REFERENCES quotation_parts(part_id) ON DELETE CASCADE,
     aux_type_id INTEGER REFERENCES auxiliary_costs(aux_type_id),
-    cost DECIMAL(10, 2) NOT NULL,
+    default_cost DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    cost DECIMAL(10, 2) GENERATED ALWAYS AS (default_cost * quantity) STORED,
+    notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

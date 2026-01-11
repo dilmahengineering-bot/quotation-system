@@ -103,11 +103,19 @@ class Quotation {
         if (part.auxiliary_costs && part.auxiliary_costs.length > 0) {
           for (const auxCost of part.auxiliary_costs) {
             const auxQuery = `
-              INSERT INTO part_auxiliary_costs (part_id, aux_type_id, cost)
-              VALUES ($1, $2, $3)
+              INSERT INTO part_auxiliary_costs (part_id, aux_type_id, default_cost, quantity, notes)
+              VALUES ($1, $2, $3, $4, $5)
             `;
-            await client.query(auxQuery, [part_id, auxCost.aux_type_id, auxCost.cost]);
-            unit_auxiliary_cost += parseFloat(auxCost.cost);
+            const default_cost = parseFloat(auxCost.default_cost || 0);
+            const quantity = parseInt(auxCost.quantity || 1);
+            await client.query(auxQuery, [
+              part_id, 
+              auxCost.aux_type_id, 
+              default_cost,
+              quantity,
+              auxCost.notes || null
+            ]);
+            unit_auxiliary_cost += (default_cost * quantity);
           }
         }
 
@@ -373,16 +381,20 @@ class Quotation {
           for (const auxCost of part.auxiliary_costs) {
             const auxQuery = `
               INSERT INTO part_auxiliary_costs (
-                part_id, aux_type_id, cost
-              ) VALUES ($1, $2, $3)
+                part_id, aux_type_id, default_cost, quantity, notes
+              ) VALUES ($1, $2, $3, $4, $5)
             `;
+            const default_cost = parseFloat(auxCost.default_cost || 0);
+            const quantity = parseInt(auxCost.quantity || 1);
             await client.query(auxQuery, [
               part_id,
               auxCost.aux_type_id,
-              auxCost.cost || 0
+              default_cost,
+              quantity,
+              auxCost.notes || null
             ]);
 
-            unit_auxiliary_cost += parseFloat(auxCost.cost || 0);
+            unit_auxiliary_cost += (default_cost * quantity);
           }
         }
 

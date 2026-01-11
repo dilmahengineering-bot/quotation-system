@@ -99,9 +99,11 @@ const QuotationForm = () => {
             estimatedTimeHours: op.operation_time_hours || 0,
           })),
           auxiliaryCosts: (part.auxiliary_costs || []).map((aux, auxIndex) => ({
-            id: aux.aux_cost_id || `aux-${auxIndex}`,
+            id: aux.aux_cost_id || aux.part_aux_id || `aux-${auxIndex}`,
             auxTypeId: aux.aux_type_id,
-            auxTypeName: aux.cost_type || '',
+            auxTypeName: aux.cost_type || aux.aux_type || '',
+            default_cost: aux.default_cost || 0,
+            quantity: aux.quantity || 1,
             cost: aux.cost || 0,
             notes: aux.notes || '',
           })),
@@ -296,7 +298,8 @@ const QuotationForm = () => {
           })),
           auxiliary_costs: part.auxiliaryCosts.map(aux => ({
             aux_type_id: aux.auxTypeId || aux.aux_type_id,
-            cost: parseFloat(aux.cost) || 0,
+            default_cost: parseFloat(aux.default_cost || aux.cost) || 0,
+            quantity: parseInt(aux.quantity) || 1,
             notes: aux.notes || '',
           })),
         })),
