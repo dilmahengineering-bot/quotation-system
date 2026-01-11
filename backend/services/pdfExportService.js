@@ -37,8 +37,6 @@ class PDFExportService {
         this.addPartsTableStructured(doc, quotation, brandBlue, lightGray, borderGray, leftColumn);
         this.addFinancialSummaryEnhanced(doc, quotation, brandBlue, accentGreen, lightGray, borderGray, leftColumn);
         this.addSignatureSectionEnhanced(doc, leftColumn, brandBlue, borderGray);
-        this.addProfessionalFooter(doc, darkGray);
-        this.addTermsAndConditionsPage(doc, brandBlue, darkGray);
 
         // Finalize
         doc.end();
@@ -555,124 +553,6 @@ class PDFExportService {
     });
 
     doc.moveDown(8);
-  }
-
-  // Professional footer
-  static addProfessionalFooter(doc, darkGray) {
-    const pageHeight = doc.page.height;
-    const y = pageHeight - 40;
-
-    doc.fontSize(7).fillColor('#999999')
-       .text(`Generated on ${new Date().toLocaleString()}`, 
-         70.87, y, { align: 'center', width: 453.26 });
-  }
-
-  // Terms and Conditions page
-  static addTermsAndConditionsPage(doc, brandColor, darkGray) {
-    doc.addPage();
-    
-    const leftX = 70.87;
-    let y = 70.87;
-
-    // Page title
-    doc.fontSize(16).font('Helvetica-Bold').fillColor(brandColor)
-       .text('TERMS AND CONDITIONS', leftX, y);
-    
-    y += 30;
-
-    doc.fontSize(9).font('Helvetica').fillColor(darkGray);
-
-    // Validity
-    doc.font('Helvetica-Bold').text('1. QUOTATION VALIDITY', leftX, y);
-    y += 15;
-    doc.font('Helvetica').text('This quotation is valid for 30 days from the date of issue.', leftX + 10, y);
-    y += 25;
-
-    // Payment Terms
-    doc.font('Helvetica-Bold').text('2. PAYMENT TERMS', leftX, y);
-    y += 15;
-    doc.font('Helvetica').text('Payment terms as specified in the quotation details section.', leftX + 10, y);
-    y += 10;
-    doc.text('All payments should be made to Dilmah CNC Manufacturing.', leftX + 10, y);
-    y += 25;
-
-    // Delivery
-    doc.font('Helvetica-Bold').text('3. DELIVERY', leftX, y);
-    y += 15;
-    doc.font('Helvetica').text('Lead time as specified in quotation details section.', leftX + 10, y);
-    y += 10;
-    doc.text('Delivery schedules are subject to material availability and production capacity.', leftX + 10, y);
-    y += 25;
-
-    // Quality Assurance
-    doc.font('Helvetica-Bold').text('4. QUALITY ASSURANCE', leftX, y);
-    y += 15;
-    doc.font('Helvetica').text('All parts manufactured to specified tolerances and quality standards.', leftX + 10, y);
-    y += 10;
-    doc.text('Quality inspection reports provided upon request.', leftX + 10, y);
-    y += 25;
-
-    // Material Specifications
-    doc.font('Helvetica-Bold').text('5. MATERIAL SPECIFICATIONS', leftX, y);
-    y += 15;
-    doc.font('Helvetica').text('Materials as specified in quotation. Any changes require written approval.', leftX + 10, y);
-    y += 10;
-    doc.text('Material certificates provided upon request.', leftX + 10, y);
-    y += 25;
-
-    // Design Changes
-    doc.font('Helvetica-Bold').text('6. DESIGN CHANGES', leftX, y);
-    y += 15;
-    doc.font('Helvetica').text('Any design changes after quotation approval may affect pricing and lead time.', leftX + 10, y);
-    y += 10;
-    doc.text('Change requests must be submitted in writing.', leftX + 10, y);
-    y += 25;
-
-    // Warranty
-    doc.font('Helvetica-Bold').text('7. WARRANTY', leftX, y);
-    y += 15;
-    doc.font('Helvetica').text('All parts covered under standard manufacturing warranty.', leftX + 10, y);
-    y += 10;
-    doc.text('Warranty does not cover damage from misuse or improper installation.', leftX + 10, y);
-    y += 25;
-
-    // Liability
-    doc.font('Helvetica-Bold').text('8. LIABILITY', leftX, y);
-    y += 15;
-    doc.font('Helvetica').text('Dilmah CNC Manufacturing liability limited to the value of the order.', leftX + 10, y);
-    y += 10;
-    doc.text('Customer responsible for design validation and application suitability.', leftX + 10, y);
-    y += 25;
-
-    // Confidentiality
-    doc.font('Helvetica-Bold').text('9. CONFIDENTIALITY', leftX, y);
-    y += 15;
-    doc.font('Helvetica').text('All quotation information is confidential and for internal use only.', leftX + 10, y);
-    y += 10;
-    doc.text('Unauthorized distribution or reproduction is prohibited.', leftX + 10, y);
-    y += 25;
-
-    // Acceptance
-    doc.font('Helvetica-Bold').text('10. ACCEPTANCE', leftX, y);
-    y += 15;
-    doc.font('Helvetica').text('Purchase order or written acceptance constitutes agreement to these terms.', leftX + 10, y);
-    y += 10;
-    doc.text('Please contact us for any clarifications before acceptance.', leftX + 10, y);
-    y += 40;
-
-    // Contact Information
-    doc.fontSize(10).font('Helvetica-Bold').fillColor(brandColor)
-       .text('CONTACT INFORMATION', leftX, y);
-    y += 20;
-
-    doc.fontSize(9).font('Helvetica').fillColor(darkGray)
-       .text('Dilmah CNC Manufacturing', leftX, y);
-    y += 12;
-    doc.text('No. 123, Industrial Zone, Colombo, Sri Lanka', leftX, y);
-    y += 12;
-    doc.text('Phone: +94 11 234 5678', leftX, y);
-    y += 12;
-    doc.text('Email: info@dilmahcnc.lk', leftX, y);
   }
 }
 
