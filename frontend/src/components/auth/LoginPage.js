@@ -157,22 +157,6 @@ const LoginPage = () => {
                 Sign In
               </Button>
             </form>
-
-            <div className="mt-8 pt-6 border-t border-industrial-200">
-              <p className="text-center text-sm text-industrial-500">
-                Demo credentials:
-              </p>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-industrial-50 p-2 rounded-lg">
-                  <span className="text-industrial-400">Admin:</span>
-                  <span className="ml-1 text-industrial-700 font-mono">admin / admin123</span>
-                </div>
-                <div className="bg-industrial-50 p-2 rounded-lg">
-                  <span className="text-industrial-400">Sales:</span>
-                  <span className="ml-1 text-industrial-700 font-mono">john.sales / password123</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

@@ -83,17 +83,6 @@ function Login() {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-
-        <div className="login-footer">
-          <p className="login-hint">
-            <strong>Default Credentials:</strong><br/>
-            Admin: <code>admin / admin123</code><br/>
-            User: <code>user / user123</code>
-          </p>
-          <p className="login-note">
-            Change these passwords after first login!
-          </p>
-        </div>
       </div>
     </div>
   );
