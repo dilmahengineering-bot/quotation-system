@@ -59,12 +59,13 @@ class PDFExportService {
     doc.fontSize(20).font('Helvetica-Bold').fillColor(brandColor)
        .text('DILMAH CNC MANUFACTURING', leftX, y);
     
-    y += 28;
-    doc.fontSize(9).font('Helvetica').fillColor(darkGray)
-       .text('No. 123, Industrial Zone, Colombo, Sri Lanka', leftX, y);
+    y += 25;
+    doc.fontSize(8).font('Helvetica').fillColor(darkGray)
+       .text('Confidential – For Internal Engineering, Costing, and Management Review Only', leftX, y);
     
-    y += 12;
-    doc.text('Phone: +94 11 234 5678 | Email: info@dilmahcnc.lk', leftX, y);
+    y += 14;
+    doc.fontSize(8).font('Helvetica').fillColor(darkGray)
+       .text('Dilmah CNC Manufacturing & Engineering Innovations', leftX, y);
 
     y += 20;
 
