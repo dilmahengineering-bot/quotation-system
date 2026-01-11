@@ -208,7 +208,7 @@ const QuotationForm = () => {
     
     // Auto-fill default_cost when aux type is selected
     if (field === 'auxTypeId') {
-      const auxType = auxCosts.find(a => a.aux_type_id === value);
+      const auxType = auxCosts.find(a => a.aux_type_id === parseInt(value));
       if (auxType) {
         updated[partIndex].auxiliaryCosts[auxIndex].default_cost = auxType.default_cost;
         updated[partIndex].auxiliaryCosts[auxIndex].auxTypeName = auxType.aux_type;
