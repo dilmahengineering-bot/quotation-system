@@ -206,11 +206,16 @@ const QuotationForm = () => {
       [field]: value,
     };
     
-    // Auto-fill cost when aux type is selected
+    // Auto-fill default_cost when aux type is selected
     if (field === 'auxTypeId') {
       const auxType = auxCosts.find(a => a.aux_type_id === value);
       if (auxType) {
-        updated[partIndex].auxiliaryCosts[auxIndex].cost = auxType.default_cost;
+        updated[partIndex].auxiliaryCosts[auxIndex].default_cost = auxType.default_cost;
+        updated[partIndex].auxiliaryCosts[auxIndex].auxTypeName = auxType.aux_type;
+        // Set default quantity to 1 if not set
+        if (!updated[partIndex].auxiliaryCosts[auxIndex].quantity) {
+          updated[partIndex].auxiliaryCosts[auxIndex].quantity = 1;
+        }
       }
     }
     
@@ -234,9 +239,11 @@ const QuotationForm = () => {
     
     const quantity = parseInt(part.quantity) || 1;
     
-    // Auxiliary Cost = Default_Cost × Quantity
+    // Auxiliary Cost = Default_Cost × Aux Quantity
     const auxCost = auxiliaryCosts.reduce((sum, aux) => {
-      return sum + (parseFloat(aux.cost) || 0) * quantity;
+      const defaultCost = parseFloat(aux.default_cost || aux.cost || 0);
+      const auxQty = parseInt(aux.quantity) || 1;
+      return sum + (defaultCost * auxQty);
     }, 0);
     
     const materialCost = parseFloat(part.unitMaterialCost) || 0;
@@ -578,13 +585,13 @@ const QuotationForm = () => {
                             Add Cost
                           </Button>
                         </div>
-                        <p className="text-xs text-industrial-500 mb-3">Total Auxiliary Cost = Unit Cost × Quantity ({part.quantity || 1})</p>
+                        <p className="text-xs text-industrial-500 mb-3">Formula: Total = Default Cost (from Master) × Quantity</p>
                         {(part.auxiliaryCosts || []).length === 0 ? (
                           <p className="text-sm text-industrial-500">No auxiliary costs added</p>
                         ) : (
                           <div className="space-y-2">
                             {part.auxiliaryCosts.map((aux, auxIndex) => (
-                              <div key={aux.part_aux_id || aux.id} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end bg-industrial-50 p-3 rounded-lg">
+                              <div key={aux.part_aux_id || aux.id} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end bg-industrial-50 p-3 rounded-lg">
                                 <Select
                                   label="Cost Type"
                                   options={auxCosts.map(a => ({ value: a.aux_type_id, label: a.aux_type }))}
@@ -592,12 +599,21 @@ const QuotationForm = () => {
                                   onChange={(e) => updateAuxCost(partIndex, auxIndex, 'auxTypeId', e.target.value)}
                                 />
                                 <Input
-                                  label="Unit Cost"
+                                  label="Default Cost (Master)"
                                   type="number"
                                   step="0.01"
-                                  min="0"
-                                  value={aux.cost || 0}
-                                  onChange={(e) => updateAuxCost(partIndex, auxIndex, 'cost', e.target.value)}
+                                  value={aux.default_cost || aux.cost || 0}
+                                  readOnly
+                                  disabled
+                                  className="bg-gray-100"
+                                  title="Auto-populated from Auxiliary Cost Master"
+                                />
+                                <Input
+                                  label="Quantity"
+                                  type="number"
+                                  min="1"
+                                  value={aux.quantity || 1}
+                                  onChange={(e) => updateAuxCost(partIndex, auxIndex, 'quantity', e.target.value)}
                                 />
                                 <Input
                                   label="Notes"
@@ -606,7 +622,7 @@ const QuotationForm = () => {
                                   onChange={(e) => updateAuxCost(partIndex, auxIndex, 'notes', e.target.value)}
                                 />
                                 <div className="flex flex-col items-end gap-1">
-                                  <span className="text-xs text-industrial-500">Total: {((aux.cost || 0) * (part.quantity || 1)).toFixed(2)}</span>
+                                  <span className="text-xs font-semibold text-industrial-700">Total: {((aux.default_cost || aux.cost || 0) * (aux.quantity || 1)).toFixed(2)}</span>
                                   <button
                                     type="button"
                                     onClick={() => removeAuxCost(partIndex, auxIndex)}
