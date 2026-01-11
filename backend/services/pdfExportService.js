@@ -53,10 +53,9 @@ class PDFExportService {
   // Enhanced two-column header
   static addEnhancedHeader(doc, quotation, brandColor, darkGray, borderGray) {
     const leftX = 70.87;
-    const rightX = 370;
     let y = 70.87;
 
-    // LEFT BLOCK - Company Branding
+    // Company Branding at top
     doc.fontSize(20).font('Helvetica-Bold').fillColor(brandColor)
        .text('DILMAH CNC MANUFACTURING', leftX, y);
     
@@ -67,36 +66,32 @@ class PDFExportService {
     y += 12;
     doc.text('Phone: +94 11 234 5678 | Email: info@dilmahcnc.lk', leftX, y);
 
-    // Thin horizontal divider under company info
-    doc.strokeColor(borderGray).lineWidth(1)
-       .moveTo(leftX, y + 15)
-       .lineTo(leftX + 250, y + 15)
-       .stroke();
+    y += 20;
 
-    // RIGHT BLOCK - Quotation metadata box
-    const boxY = 70.87;
-    const boxWidth = 155;
-    const boxHeight = 85;
+    // Quote Number box below company info
+    const boxY = y;
+    const boxWidth = 250;
+    const boxHeight = 70;
 
     // Box with subtle border
-    doc.rect(rightX, boxY, boxWidth, boxHeight)
+    doc.rect(leftX, boxY, boxWidth, boxHeight)
        .fillAndStroke('#FAFAFA', borderGray);
 
-    // Quote number (bold & highlighted)
+    // Quote number and date in single row layout
     doc.fontSize(9).font('Helvetica').fillColor('#333333')
-       .text('Quote Number', rightX + 10, boxY + 10);
+       .text('Quote Number', leftX + 10, boxY + 10);
     
     doc.fontSize(14).font('Helvetica-Bold').fillColor(brandColor)
-       .text(quotation.quote_number, rightX + 10, boxY + 25);
+       .text(quotation.quote_number, leftX + 10, boxY + 25);
 
-    // Date
+    // Date on same line
     doc.fontSize(9).font('Helvetica').fillColor('#333333')
-       .text('Date', rightX + 10, boxY + 50);
+       .text('Date', leftX + 140, boxY + 10);
     
     doc.fontSize(10).fillColor('#000000')
-       .text(new Date(quotation.quotation_date).toLocaleDateString(), rightX + 10, boxY + 63);
+       .text(new Date(quotation.quotation_date).toLocaleDateString(), leftX + 140, boxY + 25);
 
-    // Status badge
+    // Status badge at bottom of box
     const statusColors = {
       'Draft': '#6c757d',
       'Submitted': '#0288D1',
@@ -105,7 +100,7 @@ class PDFExportService {
     };
     
     doc.fontSize(8).fillColor(statusColors[quotation.quotation_status] || '#6c757d')
-       .text(`Status: ${quotation.quotation_status}`, rightX + 10, boxY + boxHeight + 8);
+       .text(`Status: ${quotation.quotation_status}`, leftX + 10, boxY + 50);
 
     doc.moveDown(3);
   }
@@ -210,8 +205,6 @@ class PDFExportService {
 
   // Parts table - structured professional layout
   static addPartsTableStructured(doc, quotation, brandColor, lightGray, borderGray, leftColumn) {
-  // Parts table - structured professional layout
-  static addPartsTableStructured(doc, quotation, brandColor, lightGray, borderGray, leftColumn) {
     let y = 440;
 
     // Section header
@@ -252,13 +245,13 @@ class PDFExportService {
            .fill(lightGray);
 
         // Header text
-        doc.fontSize(8).font('Helvetica-Bold').fillColor('#333333');
+        doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#333333');
         doc.text('Part No', colX[0] + 3, tableTop + 5, { width: colWidths[0] - 6 });
         doc.text('Qty', colX[1] + 3, tableTop + 5, { width: colWidths[1] - 6, align: 'center' });
-        doc.text('Material Cost', colX[2] + 3, tableTop + 5, { width: colWidths[2] - 6, align: 'right' });
-        doc.text('Operations Cost', colX[3] + 3, tableTop + 5, { width: colWidths[3] - 6, align: 'right' });
-        doc.text('Auxiliary Cost', colX[4] + 3, tableTop + 5, { width: colWidths[4] - 6, align: 'right' });
-        doc.text('Subtotal', colX[5] + 3, tableTop + 5, { width: colWidths[5] - 6, align: 'right' });
+        doc.text('Unit Material', colX[2] + 3, tableTop + 5, { width: colWidths[2] - 6, align: 'right' });
+        doc.text('Unit Operations', colX[3] + 3, tableTop + 5, { width: colWidths[3] - 6, align: 'right' });
+        doc.text('Unit Auxiliary', colX[4] + 3, tableTop + 5, { width: colWidths[4] - 6, align: 'right' });
+        doc.text('Extended Total', colX[5] + 3, tableTop + 5, { width: colWidths[5] - 6, align: 'right' });
 
         // Table border
         doc.rect(leftColumn, tableTop, tableWidth, 18)
@@ -266,15 +259,18 @@ class PDFExportService {
 
         y += 18;
 
-        // Data row - calculate costs
+        // Calculate all costs
         const unitMaterialCost = parseFloat(part.unit_material_cost || 0);
         const unitOperationsCost = parseFloat(part.unit_operations_cost || 0);
         const unitAuxiliaryCost = parseFloat(part.unit_auxiliary_cost || 0);
-        const partSubtotal = parseFloat(part.part_subtotal || 0);
         const quantity = parseInt(part.quantity || 1);
+        const extendedMaterial = unitMaterialCost * quantity;
+        const extendedOperations = unitOperationsCost * quantity;
+        const extendedAux = unitAuxiliaryCost * quantity;
+        const partSubtotal = parseFloat(part.part_subtotal || 0);
 
+        // Data row
         doc.fontSize(9).font('Helvetica').fillColor('#000000');
-        
         const partDisplayName = (part.part_number || part.part_name || 'Part').substring(0, 12);
         doc.text(partDisplayName, colX[0] + 3, y + 5, { width: colWidths[0] - 6 });
         doc.text(quantity.toString(), colX[1] + 3, y + 5, { width: colWidths[1] - 6, align: 'center' });
@@ -298,42 +294,90 @@ class PDFExportService {
           y += 12;
         }
 
-        // Operations details (if any)
+        // Operations breakdown (if any)
         if (part.operations && part.operations.length > 0) {
-          y += 5;
-          doc.fontSize(8).font('Helvetica').fillColor('#666666')
-             .text('Operations:', leftColumn + 10, y);
-          y += 12;
+          y += 10;
+          doc.fontSize(9).font('Helvetica-Bold').fillColor('#0B5394')
+             .text('📼 OPERATIONS BREAKDOWN:', leftColumn + 10, y);
+          y += 16;
 
-          part.operations.forEach((op, opIndex) => {
-            const opCost = parseFloat(op.operation_cost || 0).toFixed(2);
+          // Operations table header
+          const opTableY = y;
+          doc.rect(leftColumn + 15, opTableY, 438, 15).fill('#F8F9FA');
+          doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#333333');
+          doc.text('Machine/Process', leftColumn + 18, opTableY + 4, { width: 150 });
+          doc.text('Time (hrs)', leftColumn + 180, opTableY + 4, { width: 60, align: 'center' });
+          doc.text('Rate/hr', leftColumn + 260, opTableY + 4, { width: 70, align: 'right' });
+          doc.text('Unit Cost', leftColumn + 340, opTableY + 4, { width: 50, align: 'right' });
+          doc.text('Extended', leftColumn + 400, opTableY + 4, { width: 50, align: 'right' });
+          doc.rect(leftColumn + 15, opTableY, 438, 15).stroke('#D0D0D0');
+          y += 15;
+
+          part.operations.forEach((op) => {
+            const hours = parseFloat(op.operation_time_hours || 0);
+            const rate = parseFloat(op.hourly_rate || 0);
+            const unitCost = parseFloat(op.operation_cost || 0);
+            const extCost = unitCost * quantity;
             const machineName = op.machine_name || 'Machine';
-            const opTime = parseFloat(op.operation_time_hours || 0).toFixed(2);
-            const hourlyRate = parseFloat(op.hourly_rate || 0).toFixed(2);
-            
-            doc.fontSize(8).fillColor('#000000')
-               .text(`${opIndex + 1}. ${machineName} - ${opTime} hrs @ ${quotation.currency} ${hourlyRate}/hr = ${quotation.currency} ${opCost}`, 
-                 leftColumn + 20, y, { width: 420 });
-            y += 12;
+
+            doc.fontSize(8).font('Helvetica').fillColor('#000000');
+            doc.text(machineName, leftColumn + 18, y + 3, { width: 150 });
+            doc.text(hours.toFixed(2), leftColumn + 180, y + 3, { width: 60, align: 'center' });
+            doc.text(`${quotation.currency} ${rate.toFixed(2)}`, leftColumn + 260, y + 3, { width: 70, align: 'right' });
+            doc.text(`${unitCost.toFixed(2)}`, leftColumn + 340, y + 3, { width: 50, align: 'right' });
+            doc.font('Helvetica-Bold').text(`${extCost.toFixed(2)}`, leftColumn + 400, y + 3, { width: 50, align: 'right' });
+            doc.rect(leftColumn + 15, y, 438, 14).stroke('#E0E0E0');
+            y += 14;
           });
+
+          // Operations subtotal
+          y += 2;
+          doc.rect(leftColumn + 15, y, 438, 16).fill('#E8F4F8');
+          doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#0B5394');
+          doc.text('Operations Subtotal:', leftColumn + 250, y + 4, { width: 140, align: 'right' });
+          doc.text(`${quotation.currency} ${extendedOperations.toFixed(2)}`, leftColumn + 400, y + 4, { width: 50, align: 'right' });
+          doc.rect(leftColumn + 15, y, 438, 16).stroke('#0B5394');
+          y += 16;
         }
 
-        // Auxiliary costs details (if any)
+        // Auxiliary costs breakdown (if any)
         if (part.auxiliary_costs && part.auxiliary_costs.length > 0) {
-          y += 5;
-          doc.fontSize(8).font('Helvetica').fillColor('#666666')
-             .text('Auxiliary Costs:', leftColumn + 10, y);
-          y += 12;
+          y += 10;
+          doc.fontSize(9).font('Helvetica-Bold').fillColor('#38761D')
+             .text('⚙️ AUXILIARY COSTS BREAKDOWN:', leftColumn + 10, y);
+          y += 16;
 
-          part.auxiliary_costs.forEach((aux, auxIndex) => {
-            const auxCost = parseFloat(aux.cost || 0).toFixed(2);
+          // Auxiliary table header
+          const auxTableY = y;
+          doc.rect(leftColumn + 15, auxTableY, 438, 15).fill('#F8F9FA');
+          doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#333333');
+          doc.text('Cost Type', leftColumn + 18, auxTableY + 4, { width: 250 });
+          doc.text('Unit Cost', leftColumn + 280, auxTableY + 4, { width: 80, align: 'right' });
+          doc.text('Extended Cost', leftColumn + 370, auxTableY + 4, { width: 80, align: 'right' });
+          doc.rect(leftColumn + 15, auxTableY, 438, 15).stroke('#D0D0D0');
+          y += 15;
+
+          part.auxiliary_costs.forEach((aux) => {
+            const unitCost = parseFloat(aux.cost || 0);
+            const extCost = unitCost * quantity;
             const auxType = aux.aux_type || 'Cost';
-            
-            doc.fontSize(8).fillColor('#000000')
-               .text(`${auxIndex + 1}. ${auxType}: ${quotation.currency} ${auxCost}`, 
-                 leftColumn + 20, y, { width: 420 });
-            y += 12;
+
+            doc.fontSize(8).font('Helvetica').fillColor('#000000');
+            doc.text(auxType, leftColumn + 18, y + 3, { width: 250 });
+            doc.text(`${quotation.currency} ${unitCost.toFixed(2)}`, leftColumn + 280, y + 3, { width: 80, align: 'right' });
+            doc.font('Helvetica-Bold').text(`${quotation.currency} ${extCost.toFixed(2)}`, leftColumn + 370, y + 3, { width: 80, align: 'right' });
+            doc.rect(leftColumn + 15, y, 438, 14).stroke('#E0E0E0');
+            y += 14;
           });
+
+          // Auxiliary subtotal
+          y += 2;
+          doc.rect(leftColumn + 15, y, 438, 16).fill('#E8F5E9');
+          doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#38761D');
+          doc.text('Auxiliary Subtotal:', leftColumn + 280, y + 4, { width: 80, align: 'right' });
+          doc.text(`${quotation.currency} ${extendedAux.toFixed(2)}`, leftColumn + 370, y + 4, { width: 80, align: 'right' });
+          doc.rect(leftColumn + 15, y, 438, 16).stroke('#38761D');
+          y += 16;
         }
 
         y += 15;
@@ -343,7 +387,7 @@ class PDFExportService {
     doc.moveDown(2);
   }
 
-  // Financial summary - right-aligned boxed panel with hierarchy
+  // Financial summary - transparent step-by-step cost buildup table
   static addFinancialSummaryEnhanced(doc, quotation, brandColor, accentColor, lightGray, borderGray, leftColumn) {
     // Check if we need a new page
     if (doc.y > 600) {
@@ -354,63 +398,105 @@ class PDFExportService {
 
     // Section header
     doc.fontSize(12).font('Helvetica-Bold').fillColor(brandColor)
-       .text('FINANCIAL SUMMARY', leftColumn, y);
+       .text('💰 COST BUILDUP & FINANCIAL SUMMARY', leftColumn, y);
     
     y += 22;
 
-    // Right-aligned box panel
-    const boxX = leftColumn + 240;
-    const boxWidth = 213.26;
-    const boxHeight = 145;
-
-    // Box background with border
-    doc.rect(boxX, y, boxWidth, boxHeight)
-       .fillAndStroke(lightGray, borderGray);
-
-    y += 15;
-
-    // Cost breakdown rows
-    const labelX = boxX + 15;
-    const valueX = boxX + boxWidth - 15;
-
-    doc.fontSize(9).font('Helvetica').fillColor('#333333');
-
-    const costRows = [
-      ['Subtotal:', quotation.subtotal],
-      [`Discount (${parseFloat(quotation.discount_percent || 0).toFixed(1)}%):`, `-${parseFloat(quotation.discount_amount || 0).toFixed(2)}`],
-      [`Margin (${parseFloat(quotation.margin_percent || 0).toFixed(1)}%):`, `+${parseFloat(quotation.margin_amount || 0).toFixed(2)}`],
-      [`VAT (${parseFloat(quotation.vat_percent || 0).toFixed(1)}%):`, `+${parseFloat(quotation.vat_amount || 0).toFixed(2)}`]
-    ];
-
-    costRows.forEach(([label, value]) => {
-      doc.text(label, labelX, y);
-      const displayValue = typeof value === 'string' ? value : parseFloat(value).toFixed(2);
-      doc.font('Helvetica-Bold').text(`${quotation.currency} ${displayValue}`, labelX, y, { 
-        width: boxWidth - 30, 
-        align: 'right' 
-      });
-      doc.font('Helvetica');
-      y += 18;
-    });
-
-    // Strong divider line above total
-    y += 5;
-    doc.strokeColor(brandColor).lineWidth(2)
-       .moveTo(labelX, y)
-       .lineTo(valueX, y)
-       .stroke();
+    // Calculate component totals from database values
+    const subtotal = parseFloat(quotation.subtotal || 0);
     
-    y += 12;
+    // Cost buildup table - full width, professional layout
+    const tableX = leftColumn;
+    const tableWidth = 453.26;
+    const colWidths = [280, 173.26];
 
-    // TOTAL (emphasized with larger font and brand color)
-    doc.fontSize(11).font('Helvetica-Bold').fillColor(brandColor);
-    doc.text('TOTAL QUOTE VALUE:', labelX, y);
-    
-    doc.fontSize(13).fillColor(accentColor)
-       .text(`${quotation.currency} ${parseFloat(quotation.total_quote_value).toFixed(2)}`, labelX, y, { 
-         width: boxWidth - 30, 
-         align: 'right' 
-       });
+    // Table header
+    doc.rect(tableX, y, tableWidth, 16).fill('#0B5394');
+    doc.fontSize(9).font('Helvetica-Bold').fillColor('#FFFFFF');
+    doc.text('COST COMPONENT', tableX + 10, y + 5, { width: colWidths[0] - 20 });
+    doc.text('AMOUNT', tableX + colWidths[0] + 10, y + 5, { width: colWidths[1] - 20, align: 'right' });
+    doc.rect(tableX, y, tableWidth, 16).stroke('#0B5394');
+    y += 16;
+
+    // Base Total row
+    doc.rect(tableX, y, tableWidth, 16).fill('#E8F4F8');
+    doc.fontSize(9).font('Helvetica-Bold').fillColor('#0B5394');
+    doc.text('BASE TOTAL (All Parts & Costs)', tableX + 10, y + 5, { width: colWidths[0] - 20 });
+    doc.text(`${quotation.currency} ${subtotal.toFixed(2)}`, tableX + colWidths[0] + 10, y + 5, { width: colWidths[1] - 20, align: 'right' });
+    doc.rect(tableX, y, tableWidth, 16).stroke('#0B5394');
+    y += 16;
+
+    // Calculate step-by-step
+    const discountPercent = parseFloat(quotation.discount_percent || 0);
+    const discountAmount = subtotal * (discountPercent / 100);
+    const afterDiscount = subtotal - discountAmount;
+
+    // Discount row
+    if (discountPercent > 0) {
+      doc.rect(tableX, y, tableWidth, 14).fill('#FFFFFF');
+      doc.fontSize(8.5).font('Helvetica').fillColor('#333333');
+      doc.text(`Less: Discount (${discountPercent.toFixed(1)}%)`, tableX + 10, y + 4, { width: colWidths[0] - 20 });
+      doc.fillColor('#CC0000');
+      doc.text(`- ${quotation.currency} ${discountAmount.toFixed(2)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
+      doc.rect(tableX, y, tableWidth, 14).stroke('#E0E0E0');
+      y += 14;
+
+      // After discount row
+      doc.rect(tableX, y, tableWidth, 14).fill('#F8F9FA');
+      doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#333333');
+      doc.text('= After Discount', tableX + 10, y + 4, { width: colWidths[0] - 20 });
+      doc.fillColor('#000000');
+      doc.text(`${quotation.currency} ${afterDiscount.toFixed(2)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
+      doc.rect(tableX, y, tableWidth, 14).stroke('#D0D0D0');
+      y += 14;
+    }
+
+    // Margin row
+    const marginPercent = parseFloat(quotation.margin_percent || 0);
+    const marginAmount = afterDiscount * (marginPercent / 100);
+    const afterMargin = afterDiscount + marginAmount;
+
+    if (marginPercent > 0) {
+      doc.rect(tableX, y, tableWidth, 14).fill('#FFFFFF');
+      doc.fontSize(8.5).font('Helvetica').fillColor('#333333');
+      doc.text(`Add: Margin (${marginPercent.toFixed(1)}%)`, tableX + 10, y + 4, { width: colWidths[0] - 20 });
+      doc.fillColor('#006600');
+      doc.text(`+ ${quotation.currency} ${marginAmount.toFixed(2)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
+      doc.rect(tableX, y, tableWidth, 14).stroke('#E0E0E0');
+      y += 14;
+
+      // After margin row
+      doc.rect(tableX, y, tableWidth, 14).fill('#F8F9FA');
+      doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#333333');
+      doc.text('= After Margin', tableX + 10, y + 4, { width: colWidths[0] - 20 });
+      doc.fillColor('#000000');
+      doc.text(`${quotation.currency} ${afterMargin.toFixed(2)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
+      doc.rect(tableX, y, tableWidth, 14).stroke('#D0D0D0');
+      y += 14;
+    }
+
+    // VAT row
+    const vatPercent = parseFloat(quotation.vat_percent || 0);
+    const vatAmount = afterMargin * (vatPercent / 100);
+    const finalTotal = afterMargin + vatAmount;
+
+    if (vatPercent > 0) {
+      doc.rect(tableX, y, tableWidth, 14).fill('#FFFFFF');
+      doc.fontSize(8.5).font('Helvetica').fillColor('#333333');
+      doc.text(`Add: VAT/Tax (${vatPercent.toFixed(1)}%)`, tableX + 10, y + 4, { width: colWidths[0] - 20 });
+      doc.fillColor('#006600');
+      doc.text(`+ ${quotation.currency} ${vatAmount.toFixed(2)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
+      doc.rect(tableX, y, tableWidth, 14).stroke('#E0E0E0');
+      y += 14;
+    }
+
+    // FINAL TOTAL - Emphasized row
+    doc.rect(tableX, y, tableWidth, 20).fill('#38761D');
+    doc.fontSize(11).font('Helvetica-Bold').fillColor('#FFFFFF');
+    doc.text('TOTAL QUOTE VALUE', tableX + 10, y + 6, { width: colWidths[0] - 20 });
+    doc.fontSize(12);
+    doc.text(`${quotation.currency} ${finalTotal.toFixed(2)}`, tableX + colWidths[0] + 10, y + 6, { width: colWidths[1] - 20, align: 'right' });
+    doc.rect(tableX, y, tableWidth, 20).stroke('#38761D');
 
     doc.moveDown(3);
   }
