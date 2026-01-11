@@ -38,7 +38,7 @@ const QuotationForm = () => {
     quoteDate: new Date().toISOString().split('T')[0],
     leadTime: '',
     paymentTerms: 'Net 30',
-    currency: 'USD',
+    currency: 'LKR',
     shipmentType: '',
     marginPercent: 15,
     discountPercent: 0,
@@ -390,8 +390,8 @@ const QuotationForm = () => {
             <Select
               label="Currency"
               options={[
-                { value: 'USD', label: 'USD - US Dollar' },
                 { value: 'LKR', label: 'LKR - Sri Lankan Rupee' },
+                { value: 'USD', label: 'USD - US Dollar' },
               ]}
               value={formData.currency}
               onChange={(e) => handleFormChange('currency', e.target.value)}
