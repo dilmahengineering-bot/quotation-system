@@ -189,7 +189,7 @@ const AuxiliaryCostsList = () => {
                     {cost.description || '-'}
                   </td>
                   <td className="text-right font-mono font-medium">
-                    ${parseFloat(cost.default_cost).toFixed(2)}
+                    LKR {parseFloat(cost.default_cost).toFixed(2)}
                   </td>
                   <td>
                     <Badge variant={cost.is_active ? 'success' : 'danger'}>
@@ -238,7 +238,7 @@ const AuxiliaryCostsList = () => {
             required
           />
           <Input
-            label="Default Cost ($) *"
+            label="Default Cost (LKR) *"
             type="number"
             step="0.01"
             min="0"

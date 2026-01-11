@@ -110,7 +110,7 @@ function AuxiliaryCostList() {
                   <td>{cost.aux_type_id}</td>
                   <td>{cost.aux_type}</td>
                   <td>{cost.description}</td>
-                  <td>${parseFloat(cost.default_cost).toFixed(2)}</td>
+                  <td>LKR {parseFloat(cost.default_cost).toFixed(2)}</td>
                   <td>
                     <span className={`badge ${cost.is_active ? 'badge-approved' : 'badge-rejected'}`}>
                       {cost.is_active ? 'Active' : 'Disabled'}
@@ -170,7 +170,7 @@ function AuxiliaryCostList() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Default Cost ($) *</label>
+                <label className="form-label">Default Cost (LKR) *</label>
                 <input
                   type="number"
                   step="0.01"
