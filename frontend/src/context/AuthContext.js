@@ -65,6 +65,21 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   }, []);
 
+  const refreshSystem = useCallback(() => {
+    // Clear all localStorage data
+    localStorage.clear();
+    
+    // Clear all sessionStorage data
+    sessionStorage.clear();
+    
+    // Clear user state
+    setUser(null);
+    
+    // Perform full page reload to clear all cached data and state
+    window.location.href = '/login';
+    window.location.reload();
+  }, []);
+
   const changePassword = useCallback(async (currentPassword, newPassword) => {
     try {
       await authAPI.changePassword({ currentPassword, newPassword });
@@ -129,6 +144,7 @@ export const AuthProvider = ({ children }) => {
     error,
     login,
     logout,
+    refreshSystem,
     changePassword,
     hasRole,
     hasPermission,

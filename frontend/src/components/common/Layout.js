@@ -16,12 +16,13 @@ import {
   Settings,
   Bell,
   Lock,
+  RefreshCw,
 } from 'lucide-react';
 import { Modal } from './FormElements';
 import ChangePassword from '../auth/ChangePassword';
 
 const Layout = ({ children }) => {
-  const { user, logout, hasPermission } = useAuth();
+  const { user, logout, refreshSystem, hasPermission } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -31,6 +32,12 @@ const Layout = ({ children }) => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleRefreshSystem = () => {
+    if (window.confirm('This will log you out and refresh the system. Continue?')) {
+      refreshSystem();
+    }
   };
 
   const navigation = [
@@ -202,6 +209,16 @@ const Layout = ({ children }) => {
                   >
                     <Lock className="w-4 h-4" />
                     Change Password
+                  </button>
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      handleRefreshSystem();
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-industrial-700 hover:bg-industrial-50 w-full text-left"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Refresh System
                   </button>
                   <Link
                     to="/profile"
