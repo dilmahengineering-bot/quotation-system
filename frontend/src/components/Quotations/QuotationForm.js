@@ -232,14 +232,16 @@ const QuotationForm = () => {
       return sum + (parseFloat(op.hourlyRate) || 0) * (parseFloat(op.estimatedTimeHours) || 0);
     }, 0);
     
+    const quantity = parseInt(part.quantity) || 1;
+    
+    // Auxiliary Cost = Default_Cost × Quantity
     const auxCost = auxiliaryCosts.reduce((sum, aux) => {
-      return sum + (parseFloat(aux.cost) || 0);
+      return sum + (parseFloat(aux.cost) || 0) * quantity;
     }, 0);
     
     const materialCost = parseFloat(part.unitMaterialCost) || 0;
-    const quantity = parseInt(part.quantity) || 1;
     
-    return (materialCost + operationsCost + auxCost) * quantity;
+    return (materialCost * quantity) + (operationsCost * quantity) + auxCost;
   };
 
   const calculateTotals = () => {
