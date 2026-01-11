@@ -35,7 +35,8 @@ function QuotationList() {
   };
 
   const handleExportList = () => {
-    window.open('http://localhost:5000/api/quotations/export/excel/list', '_blank');
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+    window.open(`${apiUrl}/quotations/export/excel/list`, '_blank');
   };
 
   const filteredQuotations = filterStatus === 'All'
