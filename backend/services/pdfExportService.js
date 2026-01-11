@@ -50,8 +50,6 @@ class PDFExportService {
     });
   }
 
-  }
-
   // Enhanced two-column header
   static addEnhancedHeader(doc, quotation, brandColor, darkGray, borderGray) {
     const leftX = 70.87;
