@@ -47,8 +47,8 @@ const LoginPage = () => {
               <FileText className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">QuotePro</h1>
-              <p className="text-industrial-400 text-sm">Manufacturing Excellence</p>
+              <h1 className="text-2xl font-bold text-white">Dilmah CNC</h1>
+              <p className="text-industrial-400 text-sm">Precision Manufacturing</p>
             </div>
           </div>
         </div>
@@ -56,12 +56,14 @@ const LoginPage = () => {
         <div className="relative space-y-8">
           <div>
             <h2 className="text-4xl font-bold text-white leading-tight">
-              Streamline Your<br />
-              <span className="text-primary-400">Quotation Process</span>
+              Streamlining Precision<br />
+              <span className="text-primary-400">CNC Manufacturing Workflows</span>
             </h2>
             <p className="mt-4 text-industrial-300 text-lg max-w-md">
-              Professional quotation management for manufacturing and engineering businesses. 
-              Accurate costing, seamless workflows, and complete visibility.
+              A professional quotation management platform designed for Dilmah CNC Manufacturing operations, 
+              enabling accurate multi-part, multi-operation costing with full engineering traceability. 
+              The system ensures precision, consistency, and compliance, supporting advanced CNC machining, 
+              transparent cost structures, and ISO-aligned approval workflows.
             </p>
           </div>
 
@@ -81,7 +83,9 @@ const LoginPage = () => {
         </div>
 
         <div className="relative text-industrial-500 text-sm">
-          © 2024 QuotePro. Built for manufacturing excellence.
+          © 2026 Dilmah Ceylon Tea Company PLC – CNC Manufacturing & Engineering Innovations. All Rights Reserved.
+          <br />
+          <span className="text-xs">Powered by MJF Group Engineering Innovations</span>
         </div>
       </div>
 
@@ -94,8 +98,8 @@ const LoginPage = () => {
               <FileText className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-industrial-900">QuotePro</h1>
-              <p className="text-industrial-500 text-sm">Management System</p>
+              <h1 className="text-2xl font-bold text-industrial-900">Dilmah CNC</h1>
+              <p className="text-industrial-500 text-sm">Manufacturing System</p>
             </div>
           </div>
 

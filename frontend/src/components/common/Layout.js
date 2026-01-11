@@ -90,8 +90,8 @@ const Layout = ({ children }) => {
                 <FileText className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="font-bold text-white text-sm">QuotePro</h1>
-                <p className="text-xs text-industrial-400">Management</p>
+                <h1 className="font-bold text-white text-sm">Dilmah CNC</h1>
+                <p className="text-xs text-industrial-400">Manufacturing</p>
               </div>
             </div>
           ) : (
