@@ -578,6 +578,7 @@ const QuotationForm = () => {
                             Add Cost
                           </Button>
                         </div>
+                        <p className="text-xs text-industrial-500 mb-3">Total Auxiliary Cost = Unit Cost × Quantity ({part.quantity || 1})</p>
                         {(part.auxiliaryCosts || []).length === 0 ? (
                           <p className="text-sm text-industrial-500">No auxiliary costs added</p>
                         ) : (
@@ -591,7 +592,7 @@ const QuotationForm = () => {
                                   onChange={(e) => updateAuxCost(partIndex, auxIndex, 'auxTypeId', e.target.value)}
                                 />
                                 <Input
-                                  label="Cost"
+                                  label="Unit Cost"
                                   type="number"
                                   step="0.01"
                                   min="0"
@@ -604,7 +605,8 @@ const QuotationForm = () => {
                                   value={aux.notes || ''}
                                   onChange={(e) => updateAuxCost(partIndex, auxIndex, 'notes', e.target.value)}
                                 />
-                                <div className="flex justify-end">
+                                <div className="flex flex-col items-end gap-1">
+                                  <span className="text-xs text-industrial-500">Total: {((aux.cost || 0) * (part.quantity || 1)).toFixed(2)}</span>
                                   <button
                                     type="button"
                                     onClick={() => removeAuxCost(partIndex, auxIndex)}
