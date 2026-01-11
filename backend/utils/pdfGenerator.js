@@ -355,20 +355,23 @@ class PDFGenerator {
           const auxTableY = y;
           doc.rect(leftColumn + 15, auxTableY, 438, 15).fill('#F8F9FA');
           doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#333333');
-          doc.text('Cost Type', leftColumn + 18, auxTableY + 4, { width: 250 });
-          doc.text('Unit Cost', leftColumn + 280, auxTableY + 4, { width: 80, align: 'right' });
-          doc.text('Extended Cost', leftColumn + 370, auxTableY + 4, { width: 80, align: 'right' });
+          doc.text('Cost Type', leftColumn + 18, auxTableY + 4, { width: 180 });
+          doc.text('Default Cost', leftColumn + 210, auxTableY + 4, { width: 70, align: 'right' });
+          doc.text('Qty', leftColumn + 290, auxTableY + 4, { width: 40, align: 'center' });
+          doc.text('Total', leftColumn + 370, auxTableY + 4, { width: 80, align: 'right' });
           doc.rect(leftColumn + 15, auxTableY, 438, 15).stroke('#D0D0D0');
           y += 15;
 
           part.auxiliary_costs.forEach((aux) => {
-            const unitCost = parseFloat(aux.cost) || 0;
-            const extCost = unitCost * quantity;
+            const defaultCost = parseFloat(aux.default_cost || aux.cost || 0);
+            const auxQty = parseInt(aux.quantity) || 1;
+            const totalCost = defaultCost * auxQty;
 
             doc.fontSize(8).font('Helvetica').fillColor('#000000');
-            doc.text(aux.aux_type, leftColumn + 18, y + 3, { width: 250 });
-            doc.text(`${quotation.currency} ${unitCost.toFixed(2)}`, leftColumn + 280, y + 3, { width: 80, align: 'right' });
-            doc.font('Helvetica-Bold').text(`${quotation.currency} ${extCost.toFixed(2)}`, leftColumn + 370, y + 3, { width: 80, align: 'right' });
+            doc.text(aux.aux_type, leftColumn + 18, y + 3, { width: 180 });
+            doc.text(this.formatCurrency(defaultCost, quotation.currency), leftColumn + 210, y + 3, { width: 70, align: 'right' });
+            doc.text(auxQty.toString(), leftColumn + 290, y + 3, { width: 40, align: 'center' });
+            doc.font('Helvetica-Bold').text(this.formatCurrency(totalCost, quotation.currency), leftColumn + 370, y + 3, { width: 80, align: 'right' });
             doc.rect(leftColumn + 15, y, 438, 14).stroke('#E0E0E0');
             y += 14;
           });
