@@ -96,11 +96,17 @@ const AuxiliaryCostsList = () => {
     e.preventDefault();
     setSaving(true);
     try {
+      const payload = {
+        aux_type: formData.auxType,
+        description: formData.description,
+        default_cost: formData.defaultCost,
+      };
+      
       if (editingCost) {
-        await auxiliaryAPI.update(editingCost.aux_type_id, formData);
+        await auxiliaryAPI.update(editingCost.aux_type_id, payload);
         toast.success('Auxiliary cost updated');
       } else {
-        await auxiliaryAPI.create(formData);
+        await auxiliaryAPI.create(payload);
         toast.success('Auxiliary cost created');
       }
       setModalOpen(false);
