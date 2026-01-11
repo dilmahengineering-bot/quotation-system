@@ -69,14 +69,6 @@ const Dashboard = () => {
       bgColor: 'bg-emerald-50',
       iconColor: 'text-emerald-600',
     },
-    {
-      label: 'Total Value (Issued)',
-      value: `$${parseFloat(stats?.total_issued_value || 0).toLocaleString()}`,
-      icon: DollarSign,
-      color: 'purple',
-      bgColor: 'bg-purple-50',
-      iconColor: 'text-purple-600',
-    },
   ];
 
   const workflowStats = [
