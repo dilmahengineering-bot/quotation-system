@@ -1,0 +1,124 @@
+{
+  "customer_id": 1,
+  "quote_date": "2026-01-09",
+  "lead_time": "2 weeks",
+  "payment_terms": "50% advance, 50% on delivery",
+  "currency": "USD",
+  "shipment_type": "Air Freight",
+  "margin_percent": 20,
+  "discount_percent": 5,
+  "vat_percent": 0,
+  "notes": "Sample quotation for testing purposes",
+  "parts": [
+    {
+      "part_number": "PART-001-2026",
+      "part_description": "Custom CNC Machined Bracket - Aluminum 6061",
+      "quantity": 25,
+      "unit_material_cost": 45.00,
+      "operations": [
+        {
+          "machine_id": 1,
+          "operation_name": "CNC Milling - Roughing",
+          "estimated_time_hours": 1.5
+        },
+        {
+          "machine_id": 1,
+          "operation_name": "CNC Milling - Finishing",
+          "estimated_time_hours": 0.75
+        },
+        {
+          "machine_id": 5,
+          "operation_name": "Surface Grinding",
+          "estimated_time_hours": 0.5
+        }
+      ],
+      "auxiliaryCosts": [
+        {
+          "aux_type_id": 1,
+          "cost_amount": 50.00,
+          "description": "Initial setup for milling operations"
+        },
+        {
+          "aux_type_id": 2,
+          "cost_amount": 30.00,
+          "description": "Final dimensional inspection"
+        },
+        {
+          "aux_type_id": 4,
+          "cost_amount": 15.00,
+          "description": "Anti-corrosion packaging"
+        }
+      ]
+    },
+    {
+      "part_number": "PART-002-2026",
+      "part_description": "Precision Shaft - Stainless Steel 316",
+      "quantity": 50,
+      "unit_material_cost": 28.00,
+      "operations": [
+        {
+          "machine_id": 2,
+          "operation_name": "CNC Turning - OD",
+          "estimated_time_hours": 0.8
+        },
+        {
+          "machine_id": 2,
+          "operation_name": "CNC Turning - Threading",
+          "estimated_time_hours": 0.4
+        },
+        {
+          "machine_id": 5,
+          "operation_name": "Centerless Grinding",
+          "estimated_time_hours": 0.3
+        }
+      ],
+      "auxiliaryCosts": [
+        {
+          "aux_type_id": 1,
+          "cost_amount": 40.00,
+          "description": "Lathe setup and tool preparation"
+        },
+        {
+          "aux_type_id": 2,
+          "cost_amount": 25.00,
+          "description": "Quality control inspection"
+        }
+      ]
+    },
+    {
+      "part_number": "PART-003-2026",
+      "part_description": "EDM Die Cavity Insert - Tool Steel H13",
+      "quantity": 5,
+      "unit_material_cost": 180.00,
+      "operations": [
+        {
+          "machine_id": 3,
+          "operation_name": "EDM Cavity Machining",
+          "estimated_time_hours": 8.0
+        },
+        {
+          "machine_id": 4,
+          "operation_name": "Wire EDM Detail Features",
+          "estimated_time_hours": 4.5
+        }
+      ],
+      "auxiliaryCosts": [
+        {
+          "aux_type_id": 1,
+          "cost_amount": 150.00,
+          "description": "EDM electrode preparation"
+        },
+        {
+          "aux_type_id": 2,
+          "cost_amount": 75.00,
+          "description": "CMM inspection and verification"
+        },
+        {
+          "aux_type_id": 3,
+          "cost_amount": 200.00,
+          "description": "Specialized tooling and electrodes"
+        }
+      ]
+    }
+  ]
+}

@@ -51,7 +51,8 @@ const authController = {
           username: user.username,
           full_name: user.full_name,
           email: user.email,
-          role: user.role
+          role: user.role,
+          require_password_change: user.require_password_change || false
         }
       });
 
@@ -139,9 +140,10 @@ const authController = {
       }
 
       // Validate new password strength
-      if (newPassword.length < 6) {
+      const passwordValidation = User.validatePassword(newPassword);
+      if (!passwordValidation.isValid) {
         return res.status(400).json({ 
-          error: 'New password must be at least 6 characters long' 
+          error: passwordValidation.errors.join('. ')
         });
       }
 
@@ -155,8 +157,14 @@ const authController = {
         return res.status(401).json({ error: 'Current password is incorrect' });
       }
 
-      // Change password
-      await User.changePassword(req.user.user_id, newPassword);
+      // Check if new password is same as current
+      const isSamePassword = await User.verifyPassword(newPassword, user.password_hash);
+      if (isSamePassword) {
+        return res.status(400).json({ error: 'New password must be different from current password' });
+      }
+
+      // Change password and clear require_password_change flag
+      await User.changePassword(req.user.user_id, newPassword, false);
 
       res.json({
         success: true,

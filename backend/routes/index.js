@@ -28,6 +28,7 @@ router.post('/users', authMiddleware.verifyToken, authMiddleware.isAdmin, userCo
 router.put('/users/:id', authMiddleware.verifyToken, authMiddleware.isAdmin, userController.update);
 router.patch('/users/:id/disable', authMiddleware.verifyToken, authMiddleware.isAdmin, userController.disable);
 router.patch('/users/:id/enable', authMiddleware.verifyToken, authMiddleware.isAdmin, userController.enable);
+router.post('/users/:id/reset-password', authMiddleware.verifyToken, authMiddleware.isAdmin, userController.resetPassword);
 
 // Machine routes (authentication required)
 router.get('/machines', authMiddleware.verifyToken, machineController.getAll);
@@ -54,12 +55,21 @@ router.patch('/auxiliary-costs/:id/disable', authMiddleware.verifyToken, auxilia
 router.patch('/auxiliary-costs/:id/enable', authMiddleware.verifyToken, auxiliaryCostController.enable);
 
 // Quotation routes (authentication required)
+router.get('/quotations/statistics', authMiddleware.verifyToken, quotationController.getStatistics);
 router.get('/quotations', authMiddleware.verifyToken, quotationController.getAll);
 router.get('/quotations/:id', authMiddleware.verifyToken, quotationController.getById);
 router.post('/quotations', authMiddleware.verifyToken, quotationController.create);
 router.put('/quotations/:id', authMiddleware.verifyToken, quotationController.update);
 router.patch('/quotations/:id/status', authMiddleware.verifyToken, quotationController.updateStatus);
 router.delete('/quotations/:id', authMiddleware.verifyToken, quotationController.delete);
+
+// Quotation workflow routes
+router.post('/quotations/:id/submit', authMiddleware.verifyToken, quotationController.submit);
+router.post('/quotations/:id/engineer-approve', authMiddleware.verifyToken, quotationController.engineerApprove);
+router.post('/quotations/:id/management-approve', authMiddleware.verifyToken, quotationController.managementApprove);
+router.post('/quotations/:id/reject', authMiddleware.verifyToken, quotationController.reject);
+router.post('/quotations/:id/issue', authMiddleware.verifyToken, quotationController.issue);
+router.post('/quotations/:id/revert-draft', authMiddleware.verifyToken, quotationController.revertToDraft);
 
 // Export routes (authentication required)
 router.get('/quotations/:id/export/pdf', authMiddleware.verifyToken, exportController.exportPDF);

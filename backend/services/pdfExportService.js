@@ -43,7 +43,7 @@ class PDFExportService {
     // Company Header
     doc.fontSize(24)
        .fillColor('#1e3c72')
-       .text('QUOTATION', 50, 50, { align: 'center' });
+       .text('MANUFACTURING COSTING SHEETS', 50, 50, { align: 'center' });
 
     doc.fontSize(10)
        .fillColor('#666666')

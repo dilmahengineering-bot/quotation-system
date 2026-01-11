@@ -1,641 +1,700 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { quotationAPI, customerAPI, machineAPI, auxiliaryCostAPI } from '../../services/api';
+import { quotationsAPI, customersAPI, machinesAPI, auxiliaryAPI } from '../../services/api';
+import {
+  Card,
+  CardHeader,
+  CardBody,
+  Button,
+  Input,
+  Select,
+  Textarea,
+  LoadingState,
+} from '../common/FormElements';
+import {
+  Save,
+  ArrowLeft,
+  Plus,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  Calculator,
+} from 'lucide-react';
+import toast from 'react-hot-toast';
 
-function QuotationForm() {
-  const navigate = useNavigate();
+const QuotationForm = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const isEdit = Boolean(id);
-
+  
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [machines, setMachines] = useState([]);
-  const [auxiliaryCosts, setAuxiliaryCosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-
+  const [auxCosts, setAuxCosts] = useState([]);
+  
   const [formData, setFormData] = useState({
-    customer_id: '',
-    quotation_date: new Date().toISOString().split('T')[0],
-    lead_time: '',
-    payment_terms: '',
+    customerId: '',
+    quoteDate: new Date().toISOString().split('T')[0],
+    leadTime: '',
+    paymentTerms: 'Net 30',
     currency: 'USD',
-    shipment_type: '',
-    discount_percent: 0,
-    margin_percent: 0,
-    vat_percent: 0,
-    parts: []
+    shipmentType: '',
+    marginPercent: 15,
+    discountPercent: 0,
+    vatPercent: 12,
+    notes: '',
+    validUntil: '',
   });
+  
+  const [parts, setParts] = useState([]);
+  const [expandedParts, setExpandedParts] = useState({});
 
   useEffect(() => {
-    fetchMasterData();
-    if (isEdit) {
-      fetchQuotation();
-    }
+    fetchInitialData();
   }, [id]);
 
-  const fetchMasterData = async () => {
+  const fetchInitialData = async () => {
     try {
-      const [customersRes, machinesRes, auxCostsRes] = await Promise.all([
-        customerAPI.getAll(),
-        machineAPI.getAll(),
-        auxiliaryCostAPI.getAll()
+      const [customersRes, machinesRes, auxRes] = await Promise.all([
+        customersAPI.getAll({ status: 'active' }),
+        machinesAPI.getAll({ status: 'active' }),
+        auxiliaryAPI.getAll({ status: 'active' }),
       ]);
+      
       setCustomers(customersRes.data);
       setMachines(machinesRes.data);
-      setAuxiliaryCosts(auxCostsRes.data);
-      setLoading(false);
+      setAuxCosts(auxRes.data);
+
+      if (isEdit) {
+        const quotationRes = await quotationsAPI.getById(id);
+        const quotation = quotationRes.data;
+        
+        setFormData({
+          customerId: quotation.customer_id,
+          quoteDate: quotation.quotation_date?.split('T')[0] || quotation.quote_date?.split('T')[0],
+          leadTime: quotation.lead_time || '',
+          paymentTerms: quotation.payment_terms || '',
+          currency: quotation.currency,
+          shipmentType: quotation.shipment_type || '',
+          marginPercent: quotation.margin_percent,
+          discountPercent: quotation.discount_percent,
+          vatPercent: quotation.vat_percent,
+          notes: quotation.notes || '',
+          validUntil: quotation.valid_until?.split('T')[0] || '',
+        });
+        
+        // Transform parts from snake_case to camelCase
+        const transformedParts = (quotation.parts || []).map((part, index) => ({
+          id: part.part_id || `part-${index}`,
+          partNumber: part.part_number || '',
+          partDescription: part.part_description || '',
+          unitMaterialCost: part.unit_material_cost || 0,
+          quantity: part.quantity || 1,
+          operations: (part.operations || []).map((op, opIndex) => ({
+            id: op.operation_id || `op-${opIndex}`,
+            machineId: op.machine_id,
+            machineName: op.machine_name || '',
+            hourlyRate: op.hourly_rate || 0,
+            estimatedTimeHours: op.operation_time_hours || 0,
+          })),
+          auxiliaryCosts: (part.auxiliary_costs || []).map((aux, auxIndex) => ({
+            id: aux.aux_cost_id || `aux-${auxIndex}`,
+            auxTypeId: aux.aux_type_id,
+            auxTypeName: aux.cost_type || '',
+            cost: aux.cost || 0,
+            notes: aux.notes || '',
+          })),
+        }));
+        
+        setParts(transformedParts);
+      }
     } catch (error) {
-      console.error('Error fetching master data:', error);
+      toast.error('Failed to load data');
+      console.error(error);
+    } finally {
       setLoading(false);
     }
   };
 
-  const fetchQuotation = async () => {
-    try {
-      const response = await quotationAPI.getById(id);
-      const quotation = response.data;
-      // Transform quotation data to form format
-      setFormData({
-        customer_id: quotation.customer_id,
-        quotation_date: quotation.quotation_date.split('T')[0],
-        lead_time: quotation.lead_time || '',
-        payment_terms: quotation.payment_terms || '',
-        currency: quotation.currency,
-        shipment_type: quotation.shipment_type || '',
-        discount_percent: quotation.discount_percent,
-        margin_percent: quotation.margin_percent,
-        vat_percent: quotation.vat_percent,
-        parts: quotation.parts.map(part => ({
-          part_number: part.part_number,
-          part_description: part.part_description || '',
-          unit_material_cost: part.unit_material_cost,
-          quantity: part.quantity,
-          operations: part.operations.map(op => ({
-            machine_id: op.machine_id,
-            operation_time_hours: op.operation_time_hours
-          })),
-          auxiliary_costs: part.auxiliary_costs.map(aux => ({
-            aux_type_id: aux.aux_type_id,
-            cost: aux.cost
-          }))
-        }))
-      });
-    } catch (error) {
-      console.error('Error fetching quotation:', error);
-    }
+  const handleFormChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const addPart = () => {
-    setFormData({
-      ...formData,
-      parts: [
-        ...formData.parts,
-        {
-          part_number: '',
-          part_description: '',
-          unit_material_cost: 0,
-          quantity: 1,
-          operations: [],
-          auxiliary_costs: []
-        }
-      ]
-    });
+    const newPart = {
+      id: `new-${Date.now()}`,
+      partNumber: '',
+      partDescription: '',
+      unitMaterialCost: 0,
+      quantity: 1,
+      operations: [],
+      auxiliaryCosts: [],
+    };
+    setParts([...parts, newPart]);
+    setExpandedParts(prev => ({ ...prev, [newPart.id]: true }));
   };
 
-  const removePart = (partIndex) => {
-    const newParts = formData.parts.filter((_, index) => index !== partIndex);
-    setFormData({ ...formData, parts: newParts });
+  const updatePart = (index, field, value) => {
+    const updated = [...parts];
+    updated[index] = { ...updated[index], [field]: value };
+    setParts(updated);
   };
 
-  const updatePart = (partIndex, field, value) => {
-    const newParts = [...formData.parts];
-    newParts[partIndex][field] = value;
-    setFormData({ ...formData, parts: newParts });
+  const removePart = (index) => {
+    setParts(parts.filter((_, i) => i !== index));
   };
 
   const addOperation = (partIndex) => {
-    const newParts = [...formData.parts];
-    newParts[partIndex].operations.push({
-      machine_id: '',
-      operation_time_hours: 0
-    });
-    setFormData({ ...formData, parts: newParts });
+    const updated = [...parts];
+    updated[partIndex].operations = [
+      ...updated[partIndex].operations,
+      {
+        id: `new-op-${Date.now()}`,
+        machineId: '',
+        operationName: '',
+        estimatedTimeHours: 0,
+        hourlyRate: 0,
+      },
+    ];
+    setParts(updated);
   };
 
-  const removeOperation = (partIndex, operationIndex) => {
-    const newParts = [...formData.parts];
-    newParts[partIndex].operations = newParts[partIndex].operations.filter(
-      (_, index) => index !== operationIndex
-    );
-    setFormData({ ...formData, parts: newParts });
-  };
-
-  const updateOperation = (partIndex, operationIndex, field, value) => {
-    const newParts = [...formData.parts];
-    newParts[partIndex].operations[operationIndex][field] = value;
-    setFormData({ ...formData, parts: newParts });
-  };
-
-  const addAuxiliaryCost = (partIndex) => {
-    const newParts = [...formData.parts];
-    newParts[partIndex].auxiliary_costs.push({
-      aux_type_id: '',
-      cost: 0
-    });
-    setFormData({ ...formData, parts: newParts });
-  };
-
-  const removeAuxiliaryCost = (partIndex, auxIndex) => {
-    const newParts = [...formData.parts];
-    newParts[partIndex].auxiliary_costs = newParts[partIndex].auxiliary_costs.filter(
-      (_, index) => index !== auxIndex
-    );
-    setFormData({ ...formData, parts: newParts });
-  };
-
-  const updateAuxiliaryCost = (partIndex, auxIndex, field, value) => {
-    const newParts = [...formData.parts];
-    newParts[partIndex].auxiliary_costs[auxIndex][field] = value;
+  const updateOperation = (partIndex, opIndex, field, value) => {
+    const updated = [...parts];
+    updated[partIndex].operations[opIndex] = {
+      ...updated[partIndex].operations[opIndex],
+      [field]: value,
+    };
     
-    // Auto-fill cost if aux_type_id is selected
-    if (field === 'aux_type_id' && value) {
-      const auxCost = auxiliaryCosts.find(ac => ac.aux_type_id === parseInt(value));
-      if (auxCost) {
-        newParts[partIndex].auxiliary_costs[auxIndex].cost = auxCost.default_cost;
+    // Auto-fill hourly rate when machine is selected
+    if (field === 'machineId') {
+      const machine = machines.find(m => m.machine_id === value);
+      if (machine) {
+        updated[partIndex].operations[opIndex].hourlyRate = machine.hourly_rate;
       }
     }
     
-    setFormData({ ...formData, parts: newParts });
+    setParts(updated);
   };
 
-  const calculatePartCosts = (part) => {
-    let operationsCost = 0;
-    part.operations.forEach(operation => {
-      if (operation.machine_id) {
-        const machine = machines.find(m => m.machine_id === parseInt(operation.machine_id));
-        if (machine) {
-          operationsCost += parseFloat(machine.hourly_rate) * parseFloat(operation.operation_time_hours || 0);
-        }
+  const removeOperation = (partIndex, opIndex) => {
+    const updated = [...parts];
+    updated[partIndex].operations = updated[partIndex].operations.filter((_, i) => i !== opIndex);
+    setParts(updated);
+  };
+
+  const addAuxCost = (partIndex) => {
+    const updated = [...parts];
+    updated[partIndex].auxiliaryCosts = [
+      ...updated[partIndex].auxiliaryCosts,
+      {
+        id: `new-aux-${Date.now()}`,
+        auxTypeId: '',
+        cost: 0,
+        notes: '',
+      },
+    ];
+    setParts(updated);
+  };
+
+  const updateAuxCost = (partIndex, auxIndex, field, value) => {
+    const updated = [...parts];
+    updated[partIndex].auxiliaryCosts[auxIndex] = {
+      ...updated[partIndex].auxiliaryCosts[auxIndex],
+      [field]: value,
+    };
+    
+    // Auto-fill cost when aux type is selected
+    if (field === 'auxTypeId') {
+      const auxType = auxCosts.find(a => a.aux_type_id === value);
+      if (auxType) {
+        updated[partIndex].auxiliaryCosts[auxIndex].cost = auxType.default_cost;
       }
-    });
+    }
+    
+    setParts(updated);
+  };
 
-    let auxCost = 0;
-    part.auxiliary_costs.forEach(aux => {
-      auxCost += parseFloat(aux.cost || 0);
-    });
+  const removeAuxCost = (partIndex, auxIndex) => {
+    const updated = [...parts];
+    updated[partIndex].auxiliaryCosts = updated[partIndex].auxiliaryCosts.filter((_, i) => i !== auxIndex);
+    setParts(updated);
+  };
 
-    const materialCost = parseFloat(part.unit_material_cost || 0);
-    const unitTotal = materialCost + operationsCost + auxCost;
-    const partTotal = unitTotal * parseInt(part.quantity || 1);
-
-    return { operationsCost, auxCost, unitTotal, partTotal };
+  // Calculate totals
+  const calculatePartTotal = (part) => {
+    const operations = part.operations || [];
+    const auxiliaryCosts = part.auxiliaryCosts || [];
+    
+    const operationsCost = operations.reduce((sum, op) => {
+      return sum + (parseFloat(op.hourlyRate) || 0) * (parseFloat(op.estimatedTimeHours) || 0);
+    }, 0);
+    
+    const auxCost = auxiliaryCosts.reduce((sum, aux) => {
+      return sum + (parseFloat(aux.cost) || 0);
+    }, 0);
+    
+    const materialCost = parseFloat(part.unitMaterialCost) || 0;
+    const quantity = parseInt(part.quantity) || 1;
+    
+    return (materialCost + operationsCost + auxCost) * quantity;
   };
 
   const calculateTotals = () => {
-    let totalPartsCost = 0;
-    formData.parts.forEach(part => {
-      const { partTotal } = calculatePartCosts(part);
-      totalPartsCost += partTotal;
-    });
-
-    const subtotal = totalPartsCost;
-    const discountAmount = subtotal * (parseFloat(formData.discount_percent) / 100);
-    const afterDiscount = subtotal - discountAmount;
-    const marginAmount = afterDiscount * (parseFloat(formData.margin_percent) / 100);
-    const afterMargin = afterDiscount + marginAmount;
-    const vatAmount = afterMargin * (parseFloat(formData.vat_percent) / 100);
-    const total = afterMargin + vatAmount;
-
+    const subtotal = parts.reduce((sum, part) => sum + calculatePartTotal(part), 0);
+    const discountAmount = subtotal * (parseFloat(formData.discountPercent) || 0) / 100;
+    const marginAmount = subtotal * (parseFloat(formData.marginPercent) || 0) / 100;
+    const afterDiscountMargin = subtotal - discountAmount + marginAmount;
+    const vatAmount = afterDiscountMargin * (parseFloat(formData.vatPercent) || 0) / 100;
+    const total = afterDiscountMargin + vatAmount;
+    
     return { subtotal, discountAmount, marginAmount, vatAmount, total };
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (formData.parts.length === 0) {
-      alert('Please add at least one part');
+    if (!formData.customerId) {
+      toast.error('Please select a customer');
       return;
     }
-
+    
+    setSaving(true);
+    
     try {
+      const payload = {
+        customer_id: formData.customerId,
+        quotation_date: formData.quoteDate,
+        lead_time: formData.leadTime,
+        payment_terms: formData.paymentTerms,
+        currency: formData.currency,
+        shipment_type: formData.shipmentType,
+        margin_percent: parseFloat(formData.marginPercent) || 0,
+        discount_percent: parseFloat(formData.discountPercent) || 0,
+        vat_percent: parseFloat(formData.vatPercent) || 0,
+        notes: formData.notes,
+        valid_until: formData.validUntil,
+        parts: parts.map(part => ({
+          part_number: part.partNumber,
+          part_description: part.partDescription,
+          unit_material_cost: parseFloat(part.unitMaterialCost) || 0,
+          quantity: parseInt(part.quantity) || 1,
+          operations: part.operations.map(op => ({
+            machine_id: op.machineId || op.machine_id,
+            operation_time_hours: parseFloat(op.estimatedTimeHours || op.estimated_time_hours) || 0,
+          })),
+          auxiliary_costs: part.auxiliaryCosts.map(aux => ({
+            aux_type_id: aux.auxTypeId || aux.aux_type_id,
+            cost: parseFloat(aux.cost) || 0,
+            notes: aux.notes || '',
+          })),
+        })),
+      };
+
       if (isEdit) {
-        await quotationAPI.update(id, formData);
-        alert('Quotation updated successfully');
+        await quotationsAPI.update(id, payload);
+        toast.success('Quotation updated successfully');
       } else {
-        await quotationAPI.create(formData);
-        alert('Quotation created successfully');
+        const response = await quotationsAPI.create(payload);
+        toast.success('Quotation created successfully');
+        navigate(`/quotations/${response.data.quotation_id}`);
+        return;
       }
-      navigate('/quotations');
+      
+      navigate(`/quotations/${id}`);
     } catch (error) {
-      console.error('Error saving quotation:', error);
-      alert('Error saving quotation. Please check all fields and try again.');
+      console.error('Save error:', error.response?.data || error.message);
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to save quotation';
+      toast.error(errorMessage);
+    } finally {
+      setSaving(false);
     }
   };
 
+  const togglePart = (partId) => {
+    setExpandedParts(prev => ({ ...prev, [partId]: !prev[partId] }));
+  };
+
   if (loading) {
-    return (
-      <div className="loading">
-        <div className="spinner"></div>
-      </div>
-    );
+    return <LoadingState message="Loading..." />;
   }
 
   const totals = calculateTotals();
 
   return (
-    <div>
-      <div className="card">
-        <div className="card-header">
-          <h2>{isEdit ? 'Edit Quotation' : 'Create New Quotation'}</h2>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="p-2 rounded-lg hover:bg-industrial-100"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-industrial-900">
+              {isEdit ? 'Edit Quotation' : 'New Quotation'}
+            </h1>
+            <p className="text-industrial-500">
+              {isEdit ? 'Update quotation details' : 'Create a new quotation'}
+            </p>
+          </div>
         </div>
-        <div className="card-body">
-          <form onSubmit={handleSubmit}>
-            {/* General Information */}
-            <h3 style={{ marginBottom: '1rem', color: '#1e3c72' }}>General Information</h3>
-            <div className="grid-3">
-              <div className="form-group">
-                <label className="form-label">Customer *</label>
-                <select
-                  className="form-control"
-                  value={formData.customer_id}
-                  onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
-                  required
-                >
-                  <option value="">Select Customer</option>
-                  {customers.map(customer => (
-                    <option key={customer.customer_id} value={customer.customer_id}>
-                      {customer.company_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Quotation Date *</label>
-                <input
-                  type="date"
-                  className="form-control"
-                  value={formData.quotation_date}
-                  onChange={(e) => setFormData({ ...formData, quotation_date: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Currency *</label>
-                <select
-                  className="form-control"
-                  value={formData.currency}
-                  onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                  required
-                >
-                  <option value="USD">USD</option>
-                  <option value="LKR">LKR</option>
-                  <option value="EUR">EUR</option>
-                  <option value="GBP">GBP</option>
-                </select>
-              </div>
+        <Button type="submit" loading={saving}>
+          <Save className="w-4 h-4" />
+          {isEdit ? 'Update' : 'Create'} Quotation
+        </Button>
+      </div>
+
+      {/* Basic Info */}
+      <Card>
+        <CardHeader>
+          <h2 className="font-semibold text-industrial-900">Quotation Information</h2>
+        </CardHeader>
+        <CardBody>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Select
+              label="Customer *"
+              options={customers.map(c => ({ value: c.customer_id, label: c.company_name }))}
+              value={formData.customerId}
+              onChange={(e) => handleFormChange('customerId', e.target.value)}
+              required
+            />
+            <Input
+              label="Quote Date"
+              type="date"
+              value={formData.quoteDate}
+              onChange={(e) => handleFormChange('quoteDate', e.target.value)}
+            />
+            <Input
+              label="Valid Until"
+              type="date"
+              value={formData.validUntil}
+              onChange={(e) => handleFormChange('validUntil', e.target.value)}
+            />
+            <Input
+              label="Lead Time"
+              placeholder="e.g., 2-3 weeks"
+              value={formData.leadTime}
+              onChange={(e) => handleFormChange('leadTime', e.target.value)}
+            />
+            <Input
+              label="Payment Terms"
+              placeholder="e.g., Net 30"
+              value={formData.paymentTerms}
+              onChange={(e) => handleFormChange('paymentTerms', e.target.value)}
+            />
+            <Select
+              label="Currency"
+              options={[
+                { value: 'USD', label: 'USD - US Dollar' },
+                { value: 'LKR', label: 'LKR - Sri Lankan Rupee' },
+              ]}
+              value={formData.currency}
+              onChange={(e) => handleFormChange('currency', e.target.value)}
+            />
+            <Input
+              label="Shipment Type"
+              placeholder="e.g., FOB, CIF"
+              value={formData.shipmentType}
+              onChange={(e) => handleFormChange('shipmentType', e.target.value)}
+            />
+          </div>
+          <div className="mt-4">
+            <Textarea
+              label="Notes"
+              placeholder="Additional notes..."
+              value={formData.notes}
+              onChange={(e) => handleFormChange('notes', e.target.value)}
+              rows={2}
+            />
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* Parts */}
+      <Card>
+        <CardHeader className="flex items-center justify-between">
+          <h2 className="font-semibold text-industrial-900">Parts & Operations</h2>
+          <Button type="button" size="sm" onClick={addPart}>
+            <Plus className="w-4 h-4" />
+            Add Part
+          </Button>
+        </CardHeader>
+        <CardBody className="space-y-4">
+          {parts.length === 0 ? (
+            <div className="text-center py-8 text-industrial-500">
+              No parts added yet. Click "Add Part" to get started.
             </div>
-
-            <div className="grid-3">
-              <div className="form-group">
-                <label className="form-label">Lead Time</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={formData.lead_time}
-                  onChange={(e) => setFormData({ ...formData, lead_time: e.target.value })}
-                  placeholder="e.g., 4-6 weeks"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Payment Terms</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={formData.payment_terms}
-                  onChange={(e) => setFormData({ ...formData, payment_terms: e.target.value })}
-                  placeholder="e.g., Net 30"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Shipment Type</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={formData.shipment_type}
-                  onChange={(e) => setFormData({ ...formData, shipment_type: e.target.value })}
-                  placeholder="e.g., Air Freight, Sea Freight"
-                />
-              </div>
-            </div>
-
-            {/* Parts Section */}
-            <div style={{ marginTop: '2rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3 style={{ color: '#1e3c72' }}>Parts</h3>
-                <button type="button" className="btn btn-primary" onClick={addPart}>
-                  Add Part
-                </button>
-              </div>
-
-              {formData.parts.map((part, partIndex) => {
-                const { operationsCost, auxCost, unitTotal, partTotal } = calculatePartCosts(part);
-                
-                return (
-                  <div key={partIndex} className="part-section">
-                    <div className="part-header">
-                      <h4 style={{ color: '#2a5298' }}>Part #{partIndex + 1}</h4>
-                      <button
-                        type="button"
-                        className="btn btn-danger btn-small"
-                        onClick={() => removePart(partIndex)}
-                      >
-                        Remove Part
-                      </button>
+          ) : (
+            parts.map((part, partIndex) => {
+              const partId = part.part_id || part.id;
+              const isExpanded = expandedParts[partId] !== false;
+              const partTotal = calculatePartTotal(part);
+              
+              return (
+                <div key={partId} className="border border-industrial-200 rounded-lg overflow-hidden">
+                  {/* Part Header */}
+                  <div
+                    className="flex items-center justify-between p-4 bg-industrial-50 cursor-pointer"
+                    onClick={() => togglePart(partId)}
+                  >
+                    <div className="flex items-center gap-4">
+                      {isExpanded ? (
+                        <ChevronUp className="w-5 h-5 text-industrial-400" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-industrial-400" />
+                      )}
+                      <div>
+                        <span className="font-medium text-industrial-900">
+                          {part.partNumber || part.part_number || `Part ${partIndex + 1}`}
+                        </span>
+                        <span className="ml-2 text-sm text-industrial-500">
+                          Qty: {part.quantity} | Total: {formData.currency} {partTotal.toFixed(2)}
+                        </span>
+                      </div>
                     </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="danger"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removePart(partIndex);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
 
-                    {/* Part Basic Info */}
-                    <div className="grid-2">
-                      <div className="form-group">
-                        <label className="form-label">Part Number *</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={part.part_number}
-                          onChange={(e) => updatePart(partIndex, 'part_number', e.target.value)}
+                  {/* Part Details */}
+                  {isExpanded && (
+                    <div className="p-4 space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <Input
+                          label="Part Number *"
+                          value={part.partNumber || part.part_number || ''}
+                          onChange={(e) => updatePart(partIndex, 'partNumber', e.target.value)}
                           required
                         />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Part Description</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={part.part_description}
-                          onChange={(e) => updatePart(partIndex, 'part_description', e.target.value)}
+                        <Input
+                          label="Description"
+                          value={part.partDescription || part.part_description || ''}
+                          onChange={(e) => updatePart(partIndex, 'partDescription', e.target.value)}
                         />
-                      </div>
-                    </div>
-
-                    <div className="grid-2">
-                      <div className="form-group">
-                        <label className="form-label">Unit Material Cost ({formData.currency})</label>
-                        <input
+                        <Input
+                          label="Material Cost"
                           type="number"
                           step="0.01"
-                          className="form-control"
-                          value={part.unit_material_cost}
-                          onChange={(e) => updatePart(partIndex, 'unit_material_cost', e.target.value)}
+                          min="0"
+                          value={part.unitMaterialCost || part.unit_material_cost || 0}
+                          onChange={(e) => updatePart(partIndex, 'unitMaterialCost', e.target.value)}
                         />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Quantity *</label>
-                        <input
+                        <Input
+                          label="Quantity *"
                           type="number"
                           min="1"
-                          className="form-control"
-                          value={part.quantity}
+                          value={part.quantity || 1}
                           onChange={(e) => updatePart(partIndex, 'quantity', e.target.value)}
                           required
                         />
                       </div>
-                    </div>
 
-                    {/* Operations */}
-                    <div style={{ marginTop: '1rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                        <strong>Operations</strong>
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-small"
-                          onClick={() => addOperation(partIndex)}
-                        >
-                          Add Operation
-                        </button>
-                      </div>
-
-                      {part.operations.map((operation, opIndex) => {
-                        const machine = machines.find(m => m.machine_id === parseInt(operation.machine_id));
-                        const opCost = machine ? parseFloat(machine.hourly_rate) * parseFloat(operation.operation_time_hours || 0) : 0;
-                        
-                        return (
-                          <div key={opIndex} className="operation-row">
-                            <div className="grid-3" style={{ alignItems: 'end' }}>
-                              <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label className="form-label">Machine</label>
-                                <select
-                                  className="form-control"
-                                  value={operation.machine_id}
-                                  onChange={(e) => updateOperation(partIndex, opIndex, 'machine_id', e.target.value)}
-                                  required
-                                >
-                                  <option value="">Select Machine</option>
-                                  {machines.map(machine => (
-                                    <option key={machine.machine_id} value={machine.machine_id}>
-                                      {machine.machine_name} (${machine.hourly_rate}/hr)
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label className="form-label">Time (hours)</label>
-                                <input
+                      {/* Operations */}
+                      <div className="border-t pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-medium text-industrial-700">Operations</h4>
+                          <Button type="button" size="sm" variant="secondary" onClick={() => addOperation(partIndex)}>
+                            <Plus className="w-4 h-4" />
+                            Add Operation
+                          </Button>
+                        </div>
+                        {(part.operations || []).length === 0 ? (
+                          <p className="text-sm text-industrial-500">No operations added</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {part.operations.map((op, opIndex) => (
+                              <div key={op.operation_id || op.id} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end bg-industrial-50 p-3 rounded-lg">
+                                <Select
+                                  label="Machine"
+                                  options={machines.map(m => ({ value: m.machine_id, label: `${m.machine_name} (${m.machine_type})` }))}
+                                  value={op.machineId || op.machine_id || ''}
+                                  onChange={(e) => updateOperation(partIndex, opIndex, 'machineId', e.target.value)}
+                                />
+                                <Input
+                                  label="Operation"
+                                  placeholder="e.g., Rough milling"
+                                  value={op.operationName || op.operation_name || ''}
+                                  onChange={(e) => updateOperation(partIndex, opIndex, 'operationName', e.target.value)}
+                                />
+                                <Input
+                                  label="Time (hrs)"
+                                  type="number"
+                                  step="0.25"
+                                  min="0"
+                                  value={op.estimatedTimeHours || op.estimated_time_hours || 0}
+                                  onChange={(e) => updateOperation(partIndex, opIndex, 'estimatedTimeHours', e.target.value)}
+                                />
+                                <Input
+                                  label="Rate/hr"
                                   type="number"
                                   step="0.01"
-                                  className="form-control"
-                                  value={operation.operation_time_hours}
-                                  onChange={(e) => updateOperation(partIndex, opIndex, 'operation_time_hours', e.target.value)}
-                                  required
+                                  value={op.hourlyRate || op.hourly_rate || 0}
+                                  onChange={(e) => updateOperation(partIndex, opIndex, 'hourlyRate', e.target.value)}
                                 />
-                              </div>
-                              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                <div style={{ fontWeight: '600' }}>
-                                  Cost: {formData.currency} {opCost.toFixed(2)}
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 text-sm font-medium text-industrial-700">
+                                    = {formData.currency} {((parseFloat(op.hourlyRate || op.hourly_rate) || 0) * (parseFloat(op.estimatedTimeHours || op.estimated_time_hours) || 0)).toFixed(2)}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeOperation(partIndex, opIndex)}
+                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
                                 </div>
-                                <button
-                                  type="button"
-                                  className="btn btn-danger btn-small"
-                                  onClick={() => removeOperation(partIndex, opIndex)}
-                                >
-                                  Remove
-                                </button>
                               </div>
-                            </div>
+                            ))}
                           </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Auxiliary Costs */}
-                    <div style={{ marginTop: '1rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                        <strong>Auxiliary Costs</strong>
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-small"
-                          onClick={() => addAuxiliaryCost(partIndex)}
-                        >
-                          Add Auxiliary Cost
-                        </button>
+                        )}
                       </div>
 
-                      {part.auxiliary_costs.map((aux, auxIndex) => (
-                        <div key={auxIndex} className="operation-row">
-                          <div className="grid-3" style={{ alignItems: 'end' }}>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                              <label className="form-label">Type</label>
-                              <select
-                                className="form-control"
-                                value={aux.aux_type_id}
-                                onChange={(e) => updateAuxiliaryCost(partIndex, auxIndex, 'aux_type_id', e.target.value)}
-                                required
-                              >
-                                <option value="">Select Type</option>
-                                {auxiliaryCosts.map(auxCost => (
-                                  <option key={auxCost.aux_type_id} value={auxCost.aux_type_id}>
-                                    {auxCost.aux_type}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                              <label className="form-label">Cost ({formData.currency})</label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                className="form-control"
-                                value={aux.cost}
-                                onChange={(e) => updateAuxiliaryCost(partIndex, auxIndex, 'cost', e.target.value)}
-                                required
-                              />
-                            </div>
-                            <div>
-                              <button
-                                type="button"
-                                className="btn btn-danger btn-small"
-                                onClick={() => removeAuxiliaryCost(partIndex, auxIndex)}
-                              >
-                                Remove
-                              </button>
-                            </div>
+                      {/* Auxiliary Costs */}
+                      <div className="border-t pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-medium text-industrial-700">Auxiliary Costs</h4>
+                          <Button type="button" size="sm" variant="secondary" onClick={() => addAuxCost(partIndex)}>
+                            <Plus className="w-4 h-4" />
+                            Add Cost
+                          </Button>
+                        </div>
+                        {(part.auxiliaryCosts || []).length === 0 ? (
+                          <p className="text-sm text-industrial-500">No auxiliary costs added</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {part.auxiliaryCosts.map((aux, auxIndex) => (
+                              <div key={aux.part_aux_id || aux.id} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end bg-industrial-50 p-3 rounded-lg">
+                                <Select
+                                  label="Cost Type"
+                                  options={auxCosts.map(a => ({ value: a.aux_type_id, label: a.aux_type }))}
+                                  value={aux.auxTypeId || aux.aux_type_id || ''}
+                                  onChange={(e) => updateAuxCost(partIndex, auxIndex, 'auxTypeId', e.target.value)}
+                                />
+                                <Input
+                                  label="Cost"
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={aux.cost || 0}
+                                  onChange={(e) => updateAuxCost(partIndex, auxIndex, 'cost', e.target.value)}
+                                />
+                                <Input
+                                  label="Notes"
+                                  placeholder="Optional notes"
+                                  value={aux.notes || ''}
+                                  onChange={(e) => updateAuxCost(partIndex, auxIndex, 'notes', e.target.value)}
+                                />
+                                <div className="flex justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeAuxCost(partIndex, auxIndex)}
+                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Part Summary */}
-                    <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #dee2e6' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                        <div>
-                          <div style={{ color: '#6c757d', fontSize: '0.9rem' }}>Unit Material Cost:</div>
-                          <div style={{ fontWeight: '600' }}>{formData.currency} {parseFloat(part.unit_material_cost || 0).toFixed(2)}</div>
-                        </div>
-                        <div>
-                          <div style={{ color: '#6c757d', fontSize: '0.9rem' }}>Unit Operations Cost:</div>
-                          <div style={{ fontWeight: '600' }}>{formData.currency} {operationsCost.toFixed(2)}</div>
-                        </div>
-                        <div>
-                          <div style={{ color: '#6c757d', fontSize: '0.9rem' }}>Unit Auxiliary Cost:</div>
-                          <div style={{ fontWeight: '600' }}>{formData.currency} {auxCost.toFixed(2)}</div>
-                        </div>
-                        <div>
-                          <div style={{ color: '#6c757d', fontSize: '0.9rem' }}>Unit Total Cost:</div>
-                          <div style={{ fontWeight: '600' }}>{formData.currency} {unitTotal.toFixed(2)}</div>
-                        </div>
-                        <div style={{ gridColumn: '1 / -1', paddingTop: '0.5rem', borderTop: '2px solid #2a5298' }}>
-                          <div style={{ color: '#6c757d', fontSize: '0.9rem' }}>Part Subtotal (Qty: {part.quantity}):</div>
-                          <div style={{ fontWeight: '700', fontSize: '1.2rem', color: '#1e3c72' }}>
-                            {formData.currency} {partTotal.toFixed(2)}
-                          </div>
-                        </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Financial Section */}
-            <div className="cost-summary">
-              <h3 style={{ marginBottom: '1.5rem', color: '#1e3c72' }}>Financial Summary</h3>
-              
-              <div className="grid-3" style={{ marginBottom: '1.5rem' }}>
-                <div className="form-group">
-                  <label className="form-label">Discount %</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    className="form-control"
-                    value={formData.discount_percent}
-                    onChange={(e) => setFormData({ ...formData, discount_percent: e.target.value })}
-                  />
+                  )}
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Margin %</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    className="form-control"
-                    value={formData.margin_percent}
-                    onChange={(e) => setFormData({ ...formData, margin_percent: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">VAT %</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    className="form-control"
-                    value={formData.vat_percent}
-                    onChange={(e) => setFormData({ ...formData, vat_percent: e.target.value })}
-                  />
-                </div>
-              </div>
+              );
+            })
+          )}
+        </CardBody>
+      </Card>
 
-              <div className="cost-row">
-                <span className="cost-label">Subtotal:</span>
-                <span className="cost-value">{formData.currency} {totals.subtotal.toFixed(2)}</span>
-              </div>
-              <div className="cost-row">
-                <span className="cost-label">Discount ({formData.discount_percent}%):</span>
-                <span className="cost-value">- {formData.currency} {totals.discountAmount.toFixed(2)}</span>
-              </div>
-              <div className="cost-row">
-                <span className="cost-label">Margin ({formData.margin_percent}%):</span>
-                <span className="cost-value">+ {formData.currency} {totals.marginAmount.toFixed(2)}</span>
-              </div>
-              <div className="cost-row">
-                <span className="cost-label">VAT ({formData.vat_percent}%):</span>
-                <span className="cost-value">+ {formData.currency} {totals.vatAmount.toFixed(2)}</span>
-              </div>
-              <div className="cost-row total">
-                <span className="cost-label">Total Quote Value:</span>
-                <span className="cost-value">{formData.currency} {totals.total.toFixed(2)}</span>
-              </div>
-            </div>
+      {/* Pricing Summary */}
+      <Card>
+        <CardHeader className="flex items-center gap-2">
+          <Calculator className="w-5 h-5 text-industrial-500" />
+          <h2 className="font-semibold text-industrial-900">Pricing Summary</h2>
+        </CardHeader>
+        <CardBody>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Input
+              label="Margin %"
+              type="number"
+              step="0.1"
+              min="0"
+              max="100"
+              value={formData.marginPercent}
+              onChange={(e) => handleFormChange('marginPercent', e.target.value)}
+            />
+            <Input
+              label="Discount %"
+              type="number"
+              step="0.1"
+              min="0"
+              max="100"
+              value={formData.discountPercent}
+              onChange={(e) => handleFormChange('discountPercent', e.target.value)}
+            />
+            <Input
+              label="VAT %"
+              type="number"
+              step="0.1"
+              min="0"
+              max="100"
+              value={formData.vatPercent}
+              onChange={(e) => handleFormChange('vatPercent', e.target.value)}
+            />
+          </div>
 
-            {/* Form Actions */}
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => navigate('/quotations')}
-              >
-                Cancel
-              </button>
-              <button type="submit" className="btn btn-success">
-                {isEdit ? 'Update Quotation' : 'Create Quotation'}
-              </button>
+          <div className="bg-industrial-50 rounded-lg p-4 space-y-3">
+            <div className="flex justify-between text-industrial-600">
+              <span>Subtotal</span>
+              <span>{formData.currency} {totals.subtotal.toFixed(2)}</span>
             </div>
-          </form>
-        </div>
+            <div className="flex justify-between text-industrial-600">
+              <span>Discount ({formData.discountPercent}%)</span>
+              <span className="text-red-600">- {formData.currency} {totals.discountAmount.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-industrial-600">
+              <span>Margin ({formData.marginPercent}%)</span>
+              <span className="text-emerald-600">+ {formData.currency} {totals.marginAmount.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-industrial-600">
+              <span>VAT ({formData.vatPercent}%)</span>
+              <span>+ {formData.currency} {totals.vatAmount.toFixed(2)}</span>
+            </div>
+            <div className="border-t border-industrial-200 pt-3 flex justify-between text-lg font-bold text-industrial-900">
+              <span>Total Quote Value</span>
+              <span>{formData.currency} {totals.total.toFixed(2)}</span>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* Submit */}
+      <div className="flex justify-end gap-4">
+        <Button type="button" variant="secondary" onClick={() => navigate(-1)}>
+          Cancel
+        </Button>
+        <Button type="submit" loading={saving}>
+          <Save className="w-4 h-4" />
+          {isEdit ? 'Update' : 'Create'} Quotation
+        </Button>
       </div>
-    </div>
+    </form>
   );
-}
+};
 
 export default QuotationForm;

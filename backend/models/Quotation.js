@@ -201,7 +201,7 @@ class Quotation {
   // Get quotation by ID with all details
   static async getById(id) {
     const quotationQuery = `
-      SELECT q.*, c.company_name, c.contact_person_name, c.email, c.phone, c.address
+      SELECT q.*, c.company_name, c.contact_person_name, c.email, c.phone, c.address, q.quotation_status as status
       FROM quotations q
       LEFT JOIN customers c ON q.customer_id = c.customer_id
       WHERE q.quotation_id = $1
@@ -254,7 +254,7 @@ class Quotation {
   // Get all quotations
   static async getAll() {
     const query = `
-      SELECT q.*, c.company_name
+      SELECT q.*, c.company_name, q.quotation_status as status
       FROM quotations q
       LEFT JOIN customers c ON q.customer_id = c.customer_id
       ORDER BY q.quotation_id DESC
@@ -288,10 +288,12 @@ class Quotation {
         payment_terms,
         currency,
         shipment_type,
-        discount_percent,
-        margin_percent,
-        vat_percent,
-        quotation_status
+        discount_percent = 0,
+        margin_percent = 0,
+        vat_percent = 0,
+        notes,
+        valid_until,
+        parts = []
       } = data;
 
       // Update quotation header
@@ -300,8 +302,8 @@ class Quotation {
         SET customer_id = $1, quotation_date = $2, lead_time = $3,
             payment_terms = $4, currency = $5, shipment_type = $6,
             discount_percent = $7, margin_percent = $8, vat_percent = $9,
-            quotation_status = $10, updated_at = CURRENT_TIMESTAMP
-        WHERE quotation_id = $11
+            updated_at = CURRENT_TIMESTAMP
+        WHERE quotation_id = $10
       `;
       await client.query(updateQuery, [
         customer_id,
@@ -313,9 +315,90 @@ class Quotation {
         discount_percent,
         margin_percent,
         vat_percent,
-        quotation_status,
         id
       ]);
+
+      // Delete existing parts (cascade will delete operations and aux costs)
+      await client.query('DELETE FROM quotation_parts WHERE quotation_id = $1', [id]);
+
+      // Insert updated parts and calculate costs
+      for (const part of parts) {
+        const partQuery = `
+          INSERT INTO quotation_parts (
+            quotation_id, part_number, part_description,
+            unit_material_cost, quantity
+          ) VALUES ($1, $2, $3, $4, $5)
+          RETURNING *
+        `;
+        const partResult = await client.query(partQuery, [
+          id,
+          part.part_number,
+          part.part_description,
+          part.unit_material_cost || 0,
+          part.quantity || 1
+        ]);
+
+        const part_id = partResult.rows[0].part_id;
+
+        // Insert operations
+        let unit_operations_cost = 0;
+        if (part.operations && part.operations.length > 0) {
+          for (const operation of part.operations) {
+            // Get machine hourly rate
+            const machineQuery = 'SELECT hourly_rate FROM machines WHERE machine_id = $1';
+            const machineResult = await client.query(machineQuery, [operation.machine_id]);
+            const hourly_rate = machineResult.rows[0]?.hourly_rate || 0;
+
+            const operation_cost = hourly_rate * operation.operation_time_hours;
+
+            const operationQuery = `
+              INSERT INTO part_operations (
+                part_id, machine_id, operation_time_hours, operation_cost
+              ) VALUES ($1, $2, $3, $4)
+            `;
+            await client.query(operationQuery, [
+              part_id,
+              operation.machine_id,
+              operation.operation_time_hours,
+              operation_cost
+            ]);
+
+            unit_operations_cost += operation_cost;
+          }
+        }
+
+        // Insert auxiliary costs
+        let unit_auxiliary_cost = 0;
+        if (part.auxiliary_costs && part.auxiliary_costs.length > 0) {
+          for (const auxCost of part.auxiliary_costs) {
+            const auxQuery = `
+              INSERT INTO part_auxiliary_costs (
+                part_id, aux_type_id, cost
+              ) VALUES ($1, $2, $3)
+            `;
+            await client.query(auxQuery, [
+              part_id,
+              auxCost.aux_type_id,
+              auxCost.cost || 0
+            ]);
+
+            unit_auxiliary_cost += parseFloat(auxCost.cost || 0);
+          }
+        }
+
+        // Update part costs
+        const part_subtotal = (
+          parseFloat(part.unit_material_cost || 0) + 
+          unit_operations_cost + 
+          unit_auxiliary_cost
+        ) * parseInt(part.quantity || 1);
+
+        await client.query(`
+          UPDATE quotation_parts
+          SET unit_operations_cost = $1, unit_auxiliary_cost = $2, part_subtotal = $3
+          WHERE part_id = $4
+        `, [unit_operations_cost, unit_auxiliary_cost, part_subtotal, part_id]);
+      }
 
       // Recalculate totals
       await this.calculateTotals(client, id);
@@ -335,6 +418,24 @@ class Quotation {
   static async delete(id) {
     const query = 'DELETE FROM quotations WHERE quotation_id = $1 RETURNING *';
     const result = await pool.query(query, [id]);
+    return result.rows[0];
+  }
+
+  // Get statistics
+  static async getStatistics() {
+    const query = `
+      SELECT 
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE LOWER(quotation_status) = 'draft') as draft,
+        COUNT(*) FILTER (WHERE LOWER(quotation_status) = 'submitted') as submitted,
+        COUNT(*) FILTER (WHERE LOWER(quotation_status) = 'engineer approved') as engineer_approved,
+        COUNT(*) FILTER (WHERE LOWER(quotation_status) = 'management approved') as management_approved,
+        COUNT(*) FILTER (WHERE LOWER(quotation_status) = 'issued') as issued,
+        COUNT(*) FILTER (WHERE LOWER(quotation_status) = 'rejected') as rejected,
+        COALESCE(SUM(total_quote_value) FILTER (WHERE LOWER(quotation_status) = 'issued'), 0) as total_issued_value
+      FROM quotations
+    `;
+    const result = await pool.query(query);
     return result.rows[0];
   }
 }

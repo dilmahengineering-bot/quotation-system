@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { customerAPI } from '../../services/api';
+import { customersAPI } from '../../services/api';
 
 function CustomerList() {
   const [customers, setCustomers] = useState([]);
@@ -21,7 +21,7 @@ function CustomerList() {
 
   const fetchCustomers = async () => {
     try {
-      const response = await customerAPI.getAll();
+      const response = await customersAPI.getAll();
       setCustomers(response.data);
       setLoading(false);
     } catch (error) {
@@ -34,9 +34,9 @@ function CustomerList() {
     e.preventDefault();
     try {
       if (editingCustomer) {
-        await customerAPI.update(editingCustomer.customer_id, formData);
+        await customersAPI.update(editingCustomer.customer_id, formData);
       } else {
-        await customerAPI.create(formData);
+        await customersAPI.create(formData);
       }
       fetchCustomers();
       closeModal();
@@ -62,7 +62,7 @@ function CustomerList() {
   const handleDisable = async (id) => {
     if (window.confirm('Are you sure you want to disable this customer?')) {
       try {
-        await customerAPI.disable(id);
+        await customersAPI.disable(id);
         fetchCustomers();
       } catch (error) {
         console.error('Error disabling customer:', error);

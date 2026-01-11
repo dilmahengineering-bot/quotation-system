@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { auxiliaryCostAPI } from '../../services/api';
+import { auxiliaryAPI } from '../../services/api';
 
 function AuxiliaryCostList() {
   const [auxiliaryCosts, setAuxiliaryCosts] = useState([]);
@@ -18,7 +18,7 @@ function AuxiliaryCostList() {
 
   const fetchAuxiliaryCosts = async () => {
     try {
-      const response = await auxiliaryCostAPI.getAll();
+      const response = await auxiliaryAPI.getAll();
       setAuxiliaryCosts(response.data);
       setLoading(false);
     } catch (error) {
@@ -31,9 +31,9 @@ function AuxiliaryCostList() {
     e.preventDefault();
     try {
       if (editingCost) {
-        await auxiliaryCostAPI.update(editingCost.aux_type_id, formData);
+        await auxiliaryAPI.update(editingCost.aux_type_id, formData);
       } else {
-        await auxiliaryCostAPI.create(formData);
+        await auxiliaryAPI.create(formData);
       }
       fetchAuxiliaryCosts();
       closeModal();
@@ -56,7 +56,7 @@ function AuxiliaryCostList() {
   const handleDisable = async (id) => {
     if (window.confirm('Are you sure you want to disable this auxiliary cost?')) {
       try {
-        await auxiliaryCostAPI.disable(id);
+        await auxiliaryAPI.disable(id);
         fetchAuxiliaryCosts();
       } catch (error) {
         console.error('Error disabling auxiliary cost:', error);

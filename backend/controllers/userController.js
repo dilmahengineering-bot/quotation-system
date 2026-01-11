@@ -106,6 +106,35 @@ const userController = {
       console.error('Error enabling user:', error);
       res.status(500).json({ error: error.message });
     }
+  },
+
+  // Reset password (admin only)
+  async resetPassword(req, res) {
+    try {
+      const { newPassword, requireChange = true } = req.body;
+      
+      // Validate password
+      const passwordValidation = User.validatePassword(newPassword);
+      if (!passwordValidation.isValid) {
+        return res.status(400).json({ 
+          error: passwordValidation.errors.join('. ')
+        });
+      }
+
+      const user = await User.changePassword(req.params.id, newPassword, requireChange);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      res.json({ 
+        message: 'Password reset successfully', 
+        user,
+        requireChange: requireChange 
+      });
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      res.status(500).json({ error: error.message });
+    }
   }
 };
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { machineAPI } from '../../services/api';
+import { machinesAPI } from '../../services/api';
 
 function MachineList() {
   const [machines, setMachines] = useState([]);
@@ -18,7 +18,7 @@ function MachineList() {
 
   const fetchMachines = async () => {
     try {
-      const response = await machineAPI.getAll();
+      const response = await machinesAPI.getAll();
       setMachines(response.data);
       setLoading(false);
     } catch (error) {
@@ -31,9 +31,9 @@ function MachineList() {
     e.preventDefault();
     try {
       if (editingMachine) {
-        await machineAPI.update(editingMachine.machine_id, formData);
+        await machinesAPI.update(editingMachine.machine_id, formData);
       } else {
-        await machineAPI.create(formData);
+        await machinesAPI.create(formData);
       }
       fetchMachines();
       closeModal();
@@ -56,7 +56,7 @@ function MachineList() {
   const handleDisable = async (id) => {
     if (window.confirm('Are you sure you want to disable this machine?')) {
       try {
-        await machineAPI.disable(id);
+        await machinesAPI.disable(id);
         fetchMachines();
       } catch (error) {
         console.error('Error disabling machine:', error);

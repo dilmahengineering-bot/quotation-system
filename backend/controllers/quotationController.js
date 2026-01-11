@@ -13,6 +13,16 @@ const quotationController = {
     }
   },
 
+  // Get statistics
+  async getStatistics(req, res) {
+    try {
+      const stats = await Quotation.getStatistics();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
   // Get quotation by ID
   async getById(req, res) {
     try {
@@ -40,12 +50,17 @@ const quotationController = {
   // Update quotation
   async update(req, res) {
     try {
+      console.log('UPDATE Request received for quotation:', req.params.id);
+      console.log('Payload:', JSON.stringify(req.body, null, 2));
+      
       const quotation = await Quotation.update(req.params.id, req.body);
       if (!quotation) {
         return res.status(404).json({ error: 'Quotation not found' });
       }
       res.json(quotation);
     } catch (error) {
+      console.error('UPDATE Error:', error.message);
+      console.error('Stack:', error.stack);
       res.status(500).json({ error: error.message });
     }
   },
@@ -55,6 +70,79 @@ const quotationController = {
     try {
       const { status } = req.body;
       const quotation = await Quotation.updateStatus(req.params.id, status);
+      if (!quotation) {
+        return res.status(404).json({ error: 'Quotation not found' });
+      }
+      res.json(quotation);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
+  // Workflow actions
+  async submit(req, res) {
+    try {
+      const quotation = await Quotation.updateStatus(req.params.id, 'submitted');
+      if (!quotation) {
+        return res.status(404).json({ error: 'Quotation not found' });
+      }
+      res.json(quotation);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
+  async engineerApprove(req, res) {
+    try {
+      const quotation = await Quotation.updateStatus(req.params.id, 'engineer approved');
+      if (!quotation) {
+        return res.status(404).json({ error: 'Quotation not found' });
+      }
+      res.json(quotation);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
+  async managementApprove(req, res) {
+    try {
+      const quotation = await Quotation.updateStatus(req.params.id, 'management approved');
+      if (!quotation) {
+        return res.status(404).json({ error: 'Quotation not found' });
+      }
+      res.json(quotation);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
+  async reject(req, res) {
+    try {
+      const quotation = await Quotation.updateStatus(req.params.id, 'rejected');
+      if (!quotation) {
+        return res.status(404).json({ error: 'Quotation not found' });
+      }
+      res.json(quotation);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
+  async issue(req, res) {
+    try {
+      const quotation = await Quotation.updateStatus(req.params.id, 'issued');
+      if (!quotation) {
+        return res.status(404).json({ error: 'Quotation not found' });
+      }
+      res.json(quotation);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
+  async revertToDraft(req, res) {
+    try {
+      const quotation = await Quotation.updateStatus(req.params.id, 'draft');
       if (!quotation) {
         return res.status(404).json({ error: 'Quotation not found' });
       }
