@@ -115,6 +115,8 @@ const CustomersList = () => {
         vat_number: formData.vatNumber,
       };
       
+      console.log('Submitting customer:', payload);
+      
       if (editingCustomer) {
         await customersAPI.update(editingCustomer.customer_id, payload);
         toast.success('Customer updated');
@@ -125,7 +127,9 @@ const CustomersList = () => {
       setModalOpen(false);
       fetchCustomers();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Save failed');
+      console.error('Customer save error:', error);
+      console.error('Error response:', error.response?.data);
+      toast.error(error.response?.data?.error || error.response?.data?.message || 'Save failed');
     } finally {
       setSaving(false);
     }

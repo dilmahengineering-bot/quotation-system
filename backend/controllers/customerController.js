@@ -27,11 +27,17 @@ const customerController = {
   // Create customer
   async create(req, res) {
     try {
+      console.log('CREATE Customer Request:', JSON.stringify(req.body, null, 2));
       const customer = await Customer.create(req.body);
       res.status(201).json(customer);
     } catch (error) {
+      console.error('CREATE Customer Error:', error.message);
+      console.error('Error details:', error);
       if (error.code === '23505') {
         return res.status(400).json({ error: 'Customer with this company name and email already exists' });
+      }
+      if (error.code === '23502') {
+        return res.status(400).json({ error: 'Missing required field: ' + error.column });
       }
       res.status(500).json({ error: error.message });
     }
