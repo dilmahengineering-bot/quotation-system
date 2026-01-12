@@ -106,11 +106,20 @@ const CustomersList = () => {
     e.preventDefault();
     setSaving(true);
     try {
+      const payload = {
+        company_name: formData.companyName,
+        address: formData.address,
+        contact_person_name: formData.contactPersonName,
+        email: formData.email,
+        phone: formData.phone,
+        vat_number: formData.vatNumber,
+      };
+      
       if (editingCustomer) {
-        await customersAPI.update(editingCustomer.customer_id, formData);
+        await customersAPI.update(editingCustomer.customer_id, payload);
         toast.success('Customer updated');
       } else {
-        await customersAPI.create(formData);
+        await customersAPI.create(payload);
         toast.success('Customer created');
       }
       setModalOpen(false);
