@@ -481,6 +481,49 @@ const QuotationDetail = () => {
         )}
       </Card>
 
+      {/* Other Costs */}
+      {quotation.other_costs && quotation.other_costs.length > 0 && (
+        <Card>
+          <CardHeader className="flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-industrial-500" />
+            <h2 className="font-semibold text-industrial-900">Other Costs</h2>
+          </CardHeader>
+          <CardBody>
+            <Table>
+              <thead>
+                <tr>
+                  <th>Cost Type</th>
+                  <th>Description</th>
+                  <th className="text-right">Quantity</th>
+                  <th className="text-right">Rate</th>
+                  <th className="text-right">Total</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {quotation.other_costs.map((cost) => (
+                  <tr key={cost.quotation_other_cost_id}>
+                    <td className="font-medium">{cost.cost_type}</td>
+                    <td className="text-sm text-industrial-600">{cost.description || '-'}</td>
+                    <td className="text-right">{parseFloat(cost.quantity).toFixed(2)}</td>
+                    <td className="text-right">{quotation.currency} {parseFloat(cost.rate_per_hour).toFixed(2)}</td>
+                    <td className="text-right font-medium">{quotation.currency} {parseFloat(cost.cost).toFixed(2)}</td>
+                    <td className="text-sm text-industrial-600">{cost.notes || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-industrial-300">
+                  <td colSpan="4" className="text-right font-semibold">Total Other Costs:</td>
+                  <td className="text-right font-bold text-lg">{quotation.currency} {parseFloat(quotation.total_other_cost).toFixed(2)}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </Table>
+          </CardBody>
+        </Card>
+      )}
+
       {/* Pricing Summary */}
       <Card>
         <CardHeader>
@@ -489,6 +532,16 @@ const QuotationDetail = () => {
         <CardBody>
           <div className="max-w-md ml-auto space-y-3">
             <div className="flex justify-between text-industrial-600">
+              <span>Parts Total</span>
+              <span>{quotation.currency} {parseFloat(quotation.total_parts_cost || 0).toFixed(2)}</span>
+            </div>
+            {quotation.total_other_cost > 0 && (
+              <div className="flex justify-between text-industrial-600">
+                <span>Other Costs Total</span>
+                <span>{quotation.currency} {parseFloat(quotation.total_other_cost).toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-medium text-industrial-700 pt-2 border-t border-industrial-200">
               <span>Subtotal</span>
               <span>{quotation.currency} {parseFloat(quotation.subtotal).toFixed(2)}</span>
             </div>

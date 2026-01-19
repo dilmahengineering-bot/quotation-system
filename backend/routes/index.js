@@ -7,6 +7,7 @@ const machineController = require('../controllers/machineController');
 const customerController = require('../controllers/customerController');
 const auxiliaryCostController = require('../controllers/auxiliaryCostController');
 const quotationController = require('../controllers/quotationController');
+const otherCostController = require('../controllers/otherCostController');
 const exportController = require('../controllers/exportController');
 const authMiddleware = require('../middleware/authMiddleware');
 
@@ -62,6 +63,20 @@ router.post('/quotations', authMiddleware.verifyToken, quotationController.creat
 router.put('/quotations/:id', authMiddleware.verifyToken, quotationController.update);
 router.patch('/quotations/:id/status', authMiddleware.verifyToken, quotationController.updateStatus);
 router.delete('/quotations/:id', authMiddleware.verifyToken, quotationController.delete);
+
+// Other Costs Master Data routes (Admin only)
+router.get('/other-costs/types', authMiddleware.verifyToken, otherCostController.getAllTypes);
+router.get('/other-costs/types/:id', authMiddleware.verifyToken, otherCostController.getTypeById);
+router.post('/other-costs/types', authMiddleware.verifyToken, authMiddleware.isAdmin, otherCostController.createType);
+router.put('/other-costs/types/:id', authMiddleware.verifyToken, authMiddleware.isAdmin, otherCostController.updateType);
+router.delete('/other-costs/types/:id', authMiddleware.verifyToken, authMiddleware.isAdmin, otherCostController.deleteType);
+
+// Quotation Other Costs routes (per quotation)
+router.get('/quotations/:quotationId/other-costs', authMiddleware.verifyToken, otherCostController.getByQuotationId);
+router.post('/quotations/:quotationId/other-costs', authMiddleware.verifyToken, otherCostController.addToQuotation);
+router.put('/quotation-other-costs/:id', authMiddleware.verifyToken, otherCostController.updateQuotationOtherCost);
+router.delete('/quotation-other-costs/:id', authMiddleware.verifyToken, otherCostController.removeFromQuotation);
+router.get('/quotations/:quotationId/other-costs/total', authMiddleware.verifyToken, otherCostController.getTotalForQuotation);
 
 // Quotation workflow routes
 router.post('/quotations/:id/submit', authMiddleware.verifyToken, quotationController.submit);

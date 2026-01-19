@@ -9,9 +9,13 @@ const api = axios.create({
   },
 });
 
-// Request interceptor
+// Request interceptor - Add auth token
 api.interceptors.request.use(
   (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -23,11 +27,25 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response?.status === 401) {
+      // Unauthorized - redirect to login
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
     const message = error.response?.data?.error || error.message || 'An error occurred';
     console.error('API Error:', message);
     return Promise.reject(error);
   }
 );
+
+// Auth API
+export const authApi = {
+  login: (credentials) => api.post('/auth/login', credentials),
+  logout: () => api.post('/auth/logout'),
+  getCurrentUser: () => api.get('/auth/me'),
+  changePassword: (data) => api.post('/auth/change-password', data),
+};
 
 // Machine API
 export const machineApi = {
@@ -62,6 +80,14 @@ export const auxiliaryCostApi = {
   update: (id, data) => api.put(`/auxiliary-costs/${id}`, data),
   toggle: (id) => api.patch(`/auxiliary-costs/${id}/toggle`),
   delete: (id) => api.delete(`/auxiliary-costs/${id}`),
+};
+
+// Other Cost API
+export const otherCostApi = {
+  getByQuotationId: (quotationId) => api.get(`/quotations/${quotationId}/other-costs`),
+  create: (data) => api.post('/other-costs', data),
+  update: (id, data) => api.put(`/other-costs/${id}`, data),
+  delete: (id) => api.delete(`/other-costs/${id}`),
 };
 
 // Quotation API

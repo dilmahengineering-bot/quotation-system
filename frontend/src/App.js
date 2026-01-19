@@ -13,6 +13,7 @@ import QuotationDetail from './components/Quotations/QuotationDetail';
 import CustomersList from './components/masters/CustomersList';
 import MachinesList from './components/masters/MachinesList';
 import AuxiliaryCostsList from './components/masters/AuxiliaryCostsList';
+import OtherCostsList from './components/masters/OtherCostsList';
 import UsersList from './components/masters/UsersList';
 
 // Protected Route Component
@@ -140,6 +141,16 @@ function AppRoutes() {
         element={
           <ProtectedRoute permission="auxiliary:read">
             <AuxiliaryCostsList />
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Other Costs */}
+      <Route 
+        path="/other-costs" 
+        element={
+          <ProtectedRoute permission="admin">
+            <OtherCostsList />
           </ProtectedRoute>
         } 
       />

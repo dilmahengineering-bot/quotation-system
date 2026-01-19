@@ -87,6 +87,23 @@ export const auxiliaryAPI = {
   enable: (id) => api.patch(`/auxiliary-costs/${id}/enable`),
 };
 
+// Other Costs API (Salary, Rent, Insurance, etc.)
+export const otherCostsAPI = {
+  // Master data - cost types
+  getTypes: () => api.get('/other-costs/types'),
+  getTypeById: (id) => api.get(`/other-costs/types/${id}`),
+  createType: (data) => api.post('/other-costs/types', data),
+  updateType: (id, data) => api.put(`/other-costs/types/${id}`, data),
+  deleteType: (id) => api.delete(`/other-costs/types/${id}`),
+  
+  // Quotation other costs
+  getByQuotation: (quotationId) => api.get(`/quotations/${quotationId}/other-costs`),
+  addToQuotation: (quotationId, data) => api.post(`/quotations/${quotationId}/other-costs`, data),
+  update: (id, data) => api.put(`/quotation-other-costs/${id}`, data),
+  delete: (id) => api.delete(`/quotation-other-costs/${id}`),
+  getTotal: (quotationId) => api.get(`/quotations/${quotationId}/other-costs/total`),
+};
+
 // Quotations API
 export const quotationsAPI = {
   getAll: (params) => api.get('/quotations', { params }),

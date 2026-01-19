@@ -213,6 +213,47 @@ const QuotationView = () => {
                 )}
               </div>
             </div>
+
+            {/* Other Costs */}
+            {quotation.other_costs && quotation.other_costs.length > 0 && (
+              <div className="card mb-lg">
+                <div className="card-header">
+                  <h3 className="card-title">Other Costs</h3>
+                </div>
+                <div className="card-body">
+                  <div className="table-container">
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>Cost Name</th>
+                          <th>Quantity</th>
+                          <th>Rate/Hour</th>
+                          <th className="text-right">Cost</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {quotation.other_costs.map((oc, index) => (
+                          <tr key={index}>
+                            <td><strong>{oc.cost_name}</strong></td>
+                            <td>{parseFloat(oc.quantity || 0).toFixed(2)}</td>
+                            <td>Rs. {parseFloat(oc.rate_per_hour || 0).toFixed(2)}</td>
+                            <td className="cost text-right">Rs. {parseFloat(oc.cost || 0).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <td colSpan="3" className="text-right"><strong>Total Other Costs:</strong></td>
+                          <td className="cost text-right">
+                            <strong>Rs. {quotation.other_costs.reduce((sum, oc) => sum + parseFloat(oc.cost || 0), 0).toFixed(2)}</strong>
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Summary Sidebar */}
@@ -240,6 +281,14 @@ const QuotationView = () => {
                 <span className="summary-label">Auxiliary Cost</span>
                 <span className="summary-value">{formatCurrency(quotation.total_auxiliary_cost || 0)}</span>
               </div>
+              {quotation.other_costs && quotation.other_costs.length > 0 && (
+                <div className="summary-row">
+                  <span className="summary-label">Other Costs</span>
+                  <span className="summary-value">
+                    {formatCurrency(quotation.other_costs.reduce((sum, oc) => sum + parseFloat(oc.cost || 0), 0))}
+                  </span>
+                </div>
+              )}
               <div className="summary-row">
                 <span className="summary-label">Subtotal</span>
                 <span className="summary-value">{formatCurrency(quotation.subtotal || 0)}</span>

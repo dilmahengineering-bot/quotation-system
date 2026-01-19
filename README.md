@@ -198,11 +198,20 @@ Part Subtotal = (Material Cost + Operations Cost + Auxiliary Cost) × Quantity
 
 Operations Cost = Σ(Machine Hourly Rate × Operation Time)
 
+Other Cost = Σ(Quantity × Rate/Hour) for each cost type
+  - Salary Cost_Technician
+  - Salary Cost_Admin  
+  - Repair and Maintenance
+  - Rent
+  - Insurance
+
+Subtotal = Part Subtotal + Other Cost
+
 Quotation Total = Subtotal - Discount + Margin + VAT
 
 Where:
 - Discount Amount = Subtotal × Discount %
-- Margin Amount = Subtotal × Margin %
+- Margin Amount = (Subtotal - Discount) × Margin %
 - VAT Amount = (Subtotal - Discount + Margin) × VAT %
 ```
 

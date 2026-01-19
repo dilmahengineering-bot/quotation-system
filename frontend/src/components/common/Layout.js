@@ -72,6 +72,12 @@ const Layout = ({ children }) => {
       permission: 'auxiliary:read'
     },
     { 
+      name: 'Other Costs', 
+      href: '/other-costs', 
+      icon: RefreshCw,
+      permission: 'admin'
+    },
+    { 
       name: 'Users', 
       href: '/users', 
       icon: Users,

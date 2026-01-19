@@ -27,6 +27,7 @@ const QuotationForm = () => {
   });
   
   const [parts, setParts] = useState([]);
+  const [otherCosts, setOtherCosts] = useState([]);
   
   // Modals
   const [partModalOpen, setPartModalOpen] = useState(false);
@@ -41,6 +42,7 @@ const QuotationForm = () => {
   const [partForm, setPartForm] = useState({ part_number: '', part_description: '', unit_material_cost: 0, quantity: 1 });
   const [operationForm, setOperationForm] = useState({ machine_id: '', operation_name: '', estimated_hours: 0, estimated_minutes: 0, notes: '' });
   const [auxCostForm, setAuxCostForm] = useState({ aux_type_id: '', cost: '' });
+  const [otherCostForm, setOtherCostForm] = useState({ cost_name: '', quantity: 0, rate_per_hour: 0 });
 
   useEffect(() => {
     fetchInitialData();
@@ -69,6 +71,7 @@ const QuotationForm = () => {
           status: q.status || 'Draft',
         });
         setParts(q.parts || []);
+        setOtherCosts(q.other_costs || []);
       }
     } catch (error) {
       toast.error('Failed to load data');
@@ -90,6 +93,7 @@ const QuotationForm = () => {
         status: q.status || 'Draft',
       });
       setParts(q.parts || []);
+      setOtherCosts(q.other_costs || []);
     } catch (error) {
       toast.error('Failed to refresh quotation');
     }
@@ -108,11 +112,21 @@ const QuotationForm = () => {
 
     setSaving(true);
     try {
+      const payload = {
+        ...quotation,
+        other_costs: otherCosts.map(oc => ({
+          cost_name: oc.cost_name,
+          quantity: parseFloat(oc.quantity) || 0,
+          rate_per_hour: parseFloat(oc.rate_per_hour) || 0,
+          cost: parseFloat(oc.cost) || 0
+        }))
+      };
+      
       if (isEdit) {
-        await quotationApi.update(id, quotation);
+        await quotationApi.update(id, payload);
         toast.success('Quotation updated');
       } else {
-        const response = await quotationApi.create(quotation);
+        const response = await quotationApi.create(payload);
         toast.success('Quotation created');
         navigate(`/quotations/${response.data.quotation_id}/edit`);
       }
@@ -278,6 +292,37 @@ const QuotationForm = () => {
     }
   };
 
+  // Other Costs handlers
+  const handleAddOtherCost = () => {
+    const newCost = {
+      cost_name: '',
+      quantity: 1,
+      rate_per_hour: 0,
+      cost: 0,
+      isNew: true
+    };
+    setOtherCosts([...otherCosts, newCost]);
+  };
+
+  const handleOtherCostChange = (index, field, value) => {
+    const updated = [...otherCosts];
+    updated[index][field] = value;
+    
+    // Calculate cost automatically: quantity * rate_per_hour
+    if (field === 'quantity' || field === 'rate_per_hour') {
+      const qty = parseFloat(updated[index].quantity) || 0;
+      const rate = parseFloat(updated[index].rate_per_hour) || 0;
+      updated[index].cost = qty * rate;
+    }
+    
+    setOtherCosts(updated);
+  };
+
+  const handleDeleteOtherCost = (index) => {
+    const updated = otherCosts.filter((_, i) => i !== index);
+    setOtherCosts(updated);
+  };
+
   // Calculate totals
   const calculateTotals = () => {
     let totalPartsCost = 0;
@@ -291,11 +336,17 @@ const QuotationForm = () => {
       totalAuxCost += (parseFloat(part.unit_auxiliary_cost) || 0) * qty;
     });
 
-    const subtotal = totalPartsCost + totalOpsCost + totalAuxCost;
+    // Calculate total other costs
+    let totalOtherCosts = 0;
+    otherCosts.forEach((oc) => {
+      totalOtherCosts += parseFloat(oc.cost) || 0;
+    });
+
+    const subtotal = totalPartsCost + totalOpsCost + totalAuxCost + totalOtherCosts;
     const marginAmount = subtotal * (parseFloat(quotation.margin_percent) || 0) / 100;
     const total = subtotal + marginAmount;
 
-    return { totalPartsCost, totalOpsCost, totalAuxCost, subtotal, marginAmount, total };
+    return { totalPartsCost, totalOpsCost, totalAuxCost, totalOtherCosts, subtotal, marginAmount, total };
   };
 
   const totals = calculateTotals();
@@ -558,6 +609,79 @@ const QuotationForm = () => {
                 )}
               </div>
             </div>
+
+            {/* Other Costs Section */}
+            <div className="card mb-lg">
+              <div className="card-header">
+                <h3 className="card-title">Other Costs</h3>
+                <button className="btn btn-primary" onClick={handleAddOtherCost}>
+                  <IconPlus /> Add Other Cost
+                </button>
+              </div>
+              <div className="card-body">
+                {otherCosts.length > 0 ? (
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Cost Name</th>
+                        <th>Quantity</th>
+                        <th>Rate/Hour</th>
+                        <th>Cost</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {otherCosts.map((oc, index) => (
+                        <tr key={index}>
+                          <td>
+                            <input
+                              type="text"
+                              className="form-input"
+                              value={oc.cost_name}
+                              onChange={(e) => handleOtherCostChange(index, 'cost_name', e.target.value)}
+                              placeholder="Enter cost name"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              className="form-input"
+                              value={oc.quantity}
+                              onChange={(e) => handleOtherCostChange(index, 'quantity', e.target.value)}
+                              step="0.01"
+                              min="0"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              className="form-input"
+                              value={oc.rate_per_hour}
+                              onChange={(e) => handleOtherCostChange(index, 'rate_per_hour', e.target.value)}
+                              step="0.01"
+                              min="0"
+                            />
+                          </td>
+                          <td>
+                            <span className="cost">{parseFloat(oc.cost || 0).toFixed(2)}</span>
+                          </td>
+                          <td>
+                            <button
+                              className="btn btn-danger btn-sm btn-icon"
+                              onClick={() => handleDeleteOtherCost(index)}
+                            >
+                              <IconTrash />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p className="text-muted">No other costs added</p>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Summary Sidebar */}
@@ -575,6 +699,10 @@ const QuotationForm = () => {
               <div className="summary-row">
                 <span className="summary-label">Auxiliary Costs</span>
                 <span className="summary-value">{formatCurrency(totals.totalAuxCost)}</span>
+              </div>
+              <div className="summary-row">
+                <span className="summary-label">Other Costs</span>
+                <span className="summary-value">{formatCurrency(totals.totalOtherCosts)}</span>
               </div>
               <div className="summary-row">
                 <span className="summary-label">Subtotal</span>

@@ -115,12 +115,25 @@ CREATE TABLE IF NOT EXISTS part_auxiliary_costs (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Other Costs Table (Quotation-level operational costs)
+CREATE TABLE IF NOT EXISTS other_costs (
+    other_cost_id SERIAL PRIMARY KEY,
+    quotation_id INTEGER REFERENCES quotations(quotation_id) ON DELETE CASCADE,
+    cost_name VARCHAR(255) NOT NULL,
+    quantity DECIMAL(10, 2) DEFAULT 1,
+    rate_per_hour DECIMAL(10, 2) DEFAULT 0,
+    cost DECIMAL(15, 2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for performance
 CREATE INDEX idx_quotations_customer ON quotations(customer_id);
 CREATE INDEX idx_quotations_status ON quotations(quotation_status);
 CREATE INDEX idx_quotation_parts_quotation ON quotation_parts(quotation_id);
 CREATE INDEX idx_part_operations_part ON part_operations(part_id);
 CREATE INDEX idx_part_auxiliary_costs_part ON part_auxiliary_costs(part_id);
+CREATE INDEX idx_other_costs_quotation ON other_costs(quotation_id);
 
 -- Function to generate quote number
 CREATE OR REPLACE FUNCTION generate_quote_number()

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { quotationsAPI, customersAPI, machinesAPI, auxiliaryAPI } from '../../services/api';
+import { quotationsAPI, customersAPI, machinesAPI, auxiliaryAPI, otherCostsAPI } from '../../services/api';
 import {
   Card,
   CardHeader,
@@ -19,6 +19,7 @@ import {
   ChevronDown,
   ChevronUp,
   Calculator,
+  DollarSign,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -32,6 +33,8 @@ const QuotationForm = () => {
   const [customers, setCustomers] = useState([]);
   const [machines, setMachines] = useState([]);
   const [auxCosts, setAuxCosts] = useState([]);
+  const [otherCostTypes, setOtherCostTypes] = useState([]);
+  const [otherCosts, setOtherCosts] = useState([]);
   
   const [formData, setFormData] = useState({
     customerId: '',
@@ -56,15 +59,30 @@ const QuotationForm = () => {
 
   const fetchInitialData = async () => {
     try {
-      const [customersRes, machinesRes, auxRes] = await Promise.all([
+      const [customersRes, machinesRes, auxRes, otherCostTypesRes] = await Promise.all([
         customersAPI.getAll({ status: 'active' }),
         machinesAPI.getAll({ status: 'active' }),
         auxiliaryAPI.getAll({ status: 'active' }),
+        otherCostsAPI.getTypes(),
       ]);
       
       setCustomers(customersRes.data);
       setMachines(machinesRes.data);
       setAuxCosts(auxRes.data);
+      setOtherCostTypes(otherCostTypesRes.data);
+      
+      // Initialize other costs with all types if creating new quotation
+      if (!id) {
+        const initialOtherCosts = otherCostTypesRes.data.map(type => ({
+          id: `other-${type.other_cost_id}`,
+          costTypeId: type.other_cost_id,
+          costTypeName: type.cost_type,
+          quantity: 0,
+          rate: type.default_rate,
+          notes: '',
+        }));
+        setOtherCosts(initialOtherCosts);
+      }
 
       if (isEdit) {
         const quotationRes = await quotationsAPI.getById(id);
@@ -110,6 +128,24 @@ const QuotationForm = () => {
         }));
         
         setParts(transformedParts);
+        
+        // Load other costs if editing - merge with all types
+        const otherCostsRes = await otherCostsAPI.getByQuotation(id);
+        const existingCosts = otherCostsRes.data || [];
+        
+        // Create array with all cost types, merging existing data
+        const allOtherCosts = otherCostTypesRes.data.map(type => {
+          const existing = existingCosts.find(c => c.other_cost_id === type.other_cost_id);
+          return {
+            id: existing?.quotation_other_cost_id || `other-${type.other_cost_id}`,
+            costTypeId: type.other_cost_id,
+            costTypeName: type.cost_type,
+            quantity: existing?.quantity || 0,
+            rate: existing?.rate_per_hour || type.default_rate,
+            notes: existing?.notes || '',
+          };
+        });
+        setOtherCosts(allOtherCosts);
       }
     } catch (error) {
       toast.error('Failed to load data');
@@ -230,6 +266,16 @@ const QuotationForm = () => {
     setParts(updated);
   };
 
+  // Other Costs handlers
+  const updateOtherCost = (index, field, value) => {
+    const updated = [...otherCosts];
+    updated[index] = {
+      ...updated[index],
+      [field]: value,
+    };
+    setOtherCosts(updated);
+  };
+
   // Calculate totals
   const calculatePartTotal = (part) => {
     const operations = part.operations || [];
@@ -254,14 +300,18 @@ const QuotationForm = () => {
   };
 
   const calculateTotals = () => {
-    const subtotal = parts.reduce((sum, part) => sum + calculatePartTotal(part), 0);
+    const partsTotal = parts.reduce((sum, part) => sum + calculatePartTotal(part), 0);
+    const otherCostsTotal = otherCosts.reduce((sum, cost) => {
+      return sum + (parseFloat(cost.rate) || 0) * (parseFloat(cost.quantity) || 0);
+    }, 0);
+    const subtotal = partsTotal + otherCostsTotal;
     const discountAmount = subtotal * (parseFloat(formData.discountPercent) || 0) / 100;
     const marginAmount = subtotal * (parseFloat(formData.marginPercent) || 0) / 100;
     const afterDiscountMargin = subtotal - discountAmount + marginAmount;
     const vatAmount = afterDiscountMargin * (parseFloat(formData.vatPercent) || 0) / 100;
     const total = afterDiscountMargin + vatAmount;
     
-    return { subtotal, discountAmount, marginAmount, vatAmount, total };
+    return { partsTotal, otherCostsTotal, subtotal, discountAmount, marginAmount, vatAmount, total };
   };
 
   const handleSubmit = async (e) => {
@@ -303,6 +353,14 @@ const QuotationForm = () => {
             notes: aux.notes || '',
           })),
         })),
+        other_costs: otherCosts
+          .filter(cost => parseFloat(cost.quantity) > 0)
+          .map(cost => ({
+            cost_type_id: cost.costTypeId || cost.cost_type_id,
+            quantity: parseFloat(cost.quantity),
+            rate: parseFloat(cost.rate) || 0,
+            notes: cost.notes || '',
+          })),
       };
 
       if (isEdit) {
@@ -648,6 +706,58 @@ const QuotationForm = () => {
         </CardBody>
       </Card>
 
+      {/* Other Costs Section */}
+      <Card>
+        <CardHeader className="flex items-center gap-2">
+          <DollarSign className="w-5 h-5 text-industrial-500" />
+          <h2 className="font-semibold text-industrial-900">Other Costs</h2>
+        </CardHeader>
+        <CardBody>
+          <p className="text-xs text-industrial-500 mb-4">
+            All cost types are included. Rates are fixed (Admin can change in Master Data). Only adjust quantities as needed.
+          </p>
+          <div className="space-y-3">
+            {otherCosts.map((cost, index) => (
+              <div key={cost.id} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end bg-industrial-50 p-4 rounded-lg">
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-industrial-700 mb-1">Cost Type</label>
+                  <div className="text-sm font-semibold text-industrial-900 p-2 bg-white rounded border">
+                    {cost.costTypeName}
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-industrial-700 mb-1">Rate (per unit)</label>
+                  <div className="text-sm font-medium text-industrial-600 p-2 bg-gray-100 rounded border">
+                    {formData.currency} {(parseFloat(cost.rate) || 0).toFixed(2)}
+                  </div>
+                  <span className="text-xs text-industrial-400 mt-1">Fixed rate (Admin only)</span>
+                </div>
+                <Input
+                  label="Quantity"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={cost.quantity || 0}
+                  onChange={(e) => updateOtherCost(index, 'quantity', e.target.value)}
+                />
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-industrial-700 mb-1">Total Cost</label>
+                  <div className="text-lg font-semibold text-industrial-900 p-2 bg-white rounded border">
+                    {formData.currency} {((parseFloat(cost.rate) || 0) * (parseFloat(cost.quantity) || 0)).toFixed(2)}
+                  </div>
+                </div>
+                <Input
+                  label="Notes"
+                  placeholder="Optional notes"
+                  value={cost.notes || ''}
+                  onChange={(e) => updateOtherCost(index, 'notes', e.target.value)}
+                />
+              </div>
+            ))}
+          </div>
+        </CardBody>
+      </Card>
+
       {/* Pricing Summary */}
       <Card>
         <CardHeader className="flex items-center gap-2">
@@ -687,6 +797,14 @@ const QuotationForm = () => {
 
           <div className="bg-industrial-50 rounded-lg p-4 space-y-3">
             <div className="flex justify-between text-industrial-600">
+              <span>Parts Total</span>
+              <span>{formData.currency} {totals.partsTotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-industrial-600">
+              <span>Other Costs Total</span>
+              <span>{formData.currency} {totals.otherCostsTotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between font-medium text-industrial-700 pt-2 border-t border-industrial-200">
               <span>Subtotal</span>
               <span>{formData.currency} {totals.subtotal.toFixed(2)}</span>
             </div>

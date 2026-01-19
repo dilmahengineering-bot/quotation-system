@@ -104,6 +104,7 @@ export const AuthProvider = ({ children }) => {
     if (!user) return false;
     
     const PERMISSIONS = {
+      'admin': ['admin'],
       'users:read': ['admin'],
       'users:create': ['admin'],
       'users:update': ['admin'],

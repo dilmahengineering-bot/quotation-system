@@ -23,6 +23,7 @@ class Quotation {
         currency,
         shipment_type,
         parts = [],
+        other_costs = [],
         discount_percent = 0,
         margin_percent = 0,
         vat_percent = 0
@@ -140,6 +141,25 @@ class Quotation {
         ]);
       }
 
+      // Insert other costs (only non-zero quantities)
+      if (other_costs && other_costs.length > 0) {
+        for (const otherCost of other_costs) {
+          if (parseFloat(otherCost.quantity || 0) > 0) {
+            const otherCostQuery = `
+              INSERT INTO quotation_other_costs (
+                quotation_id, other_cost_id, quantity, rate_per_hour
+              ) VALUES ($1, $2, $3, $4)
+            `;
+            await client.query(otherCostQuery, [
+              quotation_id,
+              otherCost.cost_type_id,
+              otherCost.quantity,
+              otherCost.rate
+            ]);
+          }
+        }
+      }
+
       // Calculate quotation totals
       await this.calculateTotals(client, quotation_id);
 
@@ -166,6 +186,16 @@ class Quotation {
     const partsResult = await client.query(partsQuery, [quotation_id]);
     const total_parts_cost = parseFloat(partsResult.rows[0].total_parts_cost);
 
+    // Get sum of all other costs
+    // Get total other costs
+    const otherCostsQuery = `
+      SELECT COALESCE(SUM(quantity * rate_per_hour), 0) as total_other_costs
+      FROM quotation_other_costs
+      WHERE quotation_id = $1
+    `;
+    const otherCostsResult = await client.query(otherCostsQuery, [quotation_id]);
+    const total_other_costs = parseFloat(otherCostsResult.rows[0].total_other_costs);
+
     // Get quotation discount and margin percentages
     const quotationQuery = `
       SELECT discount_percent, margin_percent, vat_percent
@@ -175,7 +205,7 @@ class Quotation {
     const quotationResult = await client.query(quotationQuery, [quotation_id]);
     const { discount_percent, margin_percent, vat_percent } = quotationResult.rows[0];
 
-    const subtotal = total_parts_cost;
+    const subtotal = total_parts_cost + total_other_costs;
     const discount_amount = subtotal * (parseFloat(discount_percent) / 100);
     const after_discount = subtotal - discount_amount;
     const margin_amount = after_discount * (parseFloat(margin_percent) / 100);
@@ -187,16 +217,18 @@ class Quotation {
     const updateQuery = `
       UPDATE quotations
       SET total_parts_cost = $1,
-          subtotal = $2,
-          discount_amount = $3,
-          margin_amount = $4,
-          vat_amount = $5,
-          total_quote_value = $6,
+          total_other_cost = $2,
+          subtotal = $3,
+          discount_amount = $4,
+          margin_amount = $5,
+          vat_amount = $6,
+          total_quote_value = $7,
           updated_at = CURRENT_TIMESTAMP
-      WHERE quotation_id = $7
+      WHERE quotation_id = $8
     `;
     await client.query(updateQuery, [
       total_parts_cost,
+      total_other_costs,
       subtotal,
       discount_amount,
       margin_amount,
@@ -256,6 +288,26 @@ class Quotation {
       part.auxiliary_costs = auxResult.rows;
     }
 
+    // Get other costs for this quotation
+    const otherCostsQuery = `
+      SELECT qoc.*, oc.cost_type, oc.description
+      FROM quotation_other_costs qoc
+      JOIN other_costs oc ON qoc.other_cost_id = oc.other_cost_id
+      WHERE qoc.quotation_id = $1
+      ORDER BY oc.sort_order
+    `;
+    const otherCostsResult = await pool.query(otherCostsQuery, [id]);
+    quotation.other_costs = otherCostsResult.rows;
+
+    // Also fetch total_other_costs for PDF summary
+    const totalOtherCostsQuery = `
+      SELECT COALESCE(SUM(quantity * rate_per_hour), 0) as total_other_costs
+      FROM quotation_other_costs
+      WHERE quotation_id = $1
+    `;
+    const totalOtherCostsResult = await pool.query(totalOtherCostsQuery, [id]);
+    quotation.total_other_costs = parseFloat(totalOtherCostsResult.rows[0].total_other_costs);
+
     return quotation;
   }
 
@@ -301,7 +353,8 @@ class Quotation {
         vat_percent = 0,
         notes,
         valid_until,
-        parts = []
+        parts = [],
+        other_costs = []
       } = data;
 
       // Update quotation header
@@ -410,6 +463,28 @@ class Quotation {
           SET unit_operations_cost = $1, unit_auxiliary_cost = $2, part_subtotal = $3
           WHERE part_id = $4
         `, [unit_operations_cost, unit_auxiliary_cost, part_subtotal, part_id]);
+      }
+
+      // Delete existing other costs
+      await client.query('DELETE FROM quotation_other_costs WHERE quotation_id = $1', [id]);
+
+      // Insert updated other costs (only non-zero quantities)
+      if (other_costs && other_costs.length > 0) {
+        for (const otherCost of other_costs) {
+          if (parseFloat(otherCost.quantity || 0) > 0) {
+            const otherCostQuery = `
+              INSERT INTO quotation_other_costs (
+                quotation_id, other_cost_id, quantity, rate_per_hour
+              ) VALUES ($1, $2, $3, $4)
+            `;
+            await client.query(otherCostQuery, [
+              id,
+              otherCost.cost_type_id,
+              otherCost.quantity,
+              otherCost.rate
+            ]);
+          }
+        }
       }
 
       // Recalculate totals

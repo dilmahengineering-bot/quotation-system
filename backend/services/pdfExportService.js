@@ -52,6 +52,53 @@ class PDFExportService {
         this.addCustomerInfoBox(doc, quotation, brandBlue, lightGray, borderGray, leftColumn);
         this.addQuotationDetailsGrid(doc, quotation, brandBlue, borderGray, leftColumn);
         this.addPartsTableStructured(doc, quotation, brandBlue, lightGray, borderGray, leftColumn);
+
+        // --- Add Other Costs Section ---
+        if (quotation.other_costs && quotation.other_costs.length > 0) {
+          let y = doc.y + 10;
+          if (y > 600) {
+            doc.addPage();
+            y = 70.87;
+          }
+          doc.fontSize(12).font('Helvetica-Bold').fillColor(brandBlue)
+            .text('OTHER COSTS', leftColumn, y);
+          y += 20;
+
+          // Table header (no Description column)
+          const tableWidth = 453.26;
+          const colWidths = [220, 60, 70, 103.26];
+          const colX = [
+            leftColumn,
+            leftColumn + colWidths[0],
+            leftColumn + colWidths[0] + colWidths[1],
+            leftColumn + colWidths[0] + colWidths[1] + colWidths[2]
+          ];
+          doc.rect(leftColumn, y, tableWidth, 18).fill(lightGray);
+          doc.fontSize(8).font('Helvetica-Bold').fillColor('#333333');
+          doc.text('Cost Type', colX[0] + 3, y + 5, { width: colWidths[0] - 6 });
+          doc.text('Qty', colX[1] + 3, y + 5, { width: colWidths[1] - 6, align: 'center' });
+          doc.text('Rate', colX[2] + 3, y + 5, { width: colWidths[2] - 6, align: 'right' });
+          doc.text('Total', colX[3] + 3, y + 5, { width: colWidths[3] - 6, align: 'right' });
+          doc.rect(leftColumn, y, tableWidth, 18).stroke(borderGray);
+          y += 18;
+
+          doc.fontSize(9).font('Helvetica').fillColor('#000000');
+          quotation.other_costs.forEach((oc) => {
+            const qty = parseFloat(oc.quantity) || 0;
+            const rate = parseFloat(oc.rate_per_hour || oc.rate || 0);
+            const total = qty * rate;
+            doc.text(oc.cost_type || '', colX[0] + 3, y + 5, { width: colWidths[0] - 6 });
+            doc.text(qty.toString(), colX[1] + 3, y + 5, { width: colWidths[1] - 6, align: 'center' });
+            doc.text(this.formatCurrency(rate, quotation.currency), colX[2] + 3, y + 5, { width: colWidths[2] - 6, align: 'right' });
+            doc.font('Helvetica-Bold').text(this.formatCurrency(total, quotation.currency), colX[3] + 3, y + 5, { width: colWidths[3] - 6, align: 'right' });
+            doc.font('Helvetica');
+            doc.rect(leftColumn, y, tableWidth, 20).stroke(borderGray);
+            y += 20;
+          });
+
+          doc.moveDown(2);
+        }
+
         this.addFinancialSummaryEnhanced(doc, quotation, brandBlue, accentGreen, lightGray, borderGray, leftColumn);
         this.addSignatureSectionEnhanced(doc, leftColumn, brandBlue, borderGray);
 
@@ -422,9 +469,13 @@ class PDFExportService {
     
     y += 22;
 
+
     // Calculate component totals from database values
     const subtotal = parseFloat(quotation.subtotal || 0);
-    
+    const totalParts = parseFloat(quotation.total_parts_cost || 0);
+    const totalOther = parseFloat(quotation.total_other_costs || 0);
+    const totalQuoteValue = parseFloat(quotation.total_quote_value || 0);
+
     // Cost buildup table - full width, professional layout
     const tableX = leftColumn;
     const tableWidth = 453.26;
@@ -438,77 +489,88 @@ class PDFExportService {
     doc.rect(tableX, y, tableWidth, 16).stroke('#0B5394');
     y += 16;
 
-    // Base Total row
+    // Parts Total row
+    doc.rect(tableX, y, tableWidth, 16).fill('#F8F9FA');
+    doc.fontSize(9).font('Helvetica-Bold').fillColor('#0B5394');
+    doc.text('Parts Total', tableX + 10, y + 5, { width: colWidths[0] - 20 });
+    doc.text(this.formatCurrency(totalParts, quotation.currency), tableX + colWidths[0] + 10, y + 5, { width: colWidths[1] - 20, align: 'right' });
+    doc.rect(tableX, y, tableWidth, 16).stroke('#0B5394');
+    y += 16;
+
+    // Other Costs Total row
+    doc.rect(tableX, y, tableWidth, 16).fill('#F8F9FA');
+    doc.fontSize(9).font('Helvetica-Bold').fillColor('#0B5394');
+    doc.text('Other Costs Total', tableX + 10, y + 5, { width: colWidths[0] - 20 });
+    doc.text(this.formatCurrency(totalOther, quotation.currency), tableX + colWidths[0] + 10, y + 5, { width: colWidths[1] - 20, align: 'right' });
+    doc.rect(tableX, y, tableWidth, 16).stroke('#0B5394');
+    y += 16;
+
+    // Subtotal row
     doc.rect(tableX, y, tableWidth, 16).fill('#E8F4F8');
     doc.fontSize(9).font('Helvetica-Bold').fillColor('#0B5394');
-    doc.text('BASE TOTAL (All Parts & Costs)', tableX + 10, y + 5, { width: colWidths[0] - 20 });
+    doc.text('SUBTOTAL', tableX + 10, y + 5, { width: colWidths[0] - 20 });
     doc.text(this.formatCurrency(subtotal, quotation.currency), tableX + colWidths[0] + 10, y + 5, { width: colWidths[1] - 20, align: 'right' });
     doc.rect(tableX, y, tableWidth, 16).stroke('#0B5394');
     y += 16;
 
+    // Always show Discount, Margin, VAT rows, even if zero
     // Calculate step-by-step
     const discountPercent = parseFloat(quotation.discount_percent || 0);
     const discountAmount = subtotal * (discountPercent / 100);
     const afterDiscount = subtotal - discountAmount;
 
-    // Discount row
-    if (discountPercent > 0) {
-      doc.rect(tableX, y, tableWidth, 14).fill('#FFFFFF');
-      doc.fontSize(8.5).font('Helvetica').fillColor('#333333');
-      doc.text(`Less: Discount (${discountPercent.toFixed(1)}%)`, tableX + 10, y + 4, { width: colWidths[0] - 20 });
-      doc.fillColor('#CC0000');
-      doc.text(`- ${this.formatCurrency(discountAmount, quotation.currency)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
-      doc.rect(tableX, y, tableWidth, 14).stroke('#E0E0E0');
-      y += 14;
+    // Discount row (always show)
+    doc.rect(tableX, y, tableWidth, 14).fill('#FFFFFF');
+    doc.fontSize(8.5).font('Helvetica').fillColor('#333333');
+    doc.text(`Less: Discount (${discountPercent.toFixed(1)}%)`, tableX + 10, y + 4, { width: colWidths[0] - 20 });
+    doc.fillColor('#CC0000');
+    doc.text(`- ${this.formatCurrency(discountAmount, quotation.currency)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
+    doc.rect(tableX, y, tableWidth, 14).stroke('#E0E0E0');
+    y += 14;
 
-      // After discount row
-      doc.rect(tableX, y, tableWidth, 14).fill('#F8F9FA');
-      doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#333333');
-      doc.text('= After Discount', tableX + 10, y + 4, { width: colWidths[0] - 20 });
-      doc.fillColor('#000000');
-      doc.text(this.formatCurrency(afterDiscount, quotation.currency), tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
-      doc.rect(tableX, y, tableWidth, 14).stroke('#D0D0D0');
-      y += 14;
-    }
+    // After discount row
+    doc.rect(tableX, y, tableWidth, 14).fill('#F8F9FA');
+    doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#333333');
+    doc.text('= After Discount', tableX + 10, y + 4, { width: colWidths[0] - 20 });
+    doc.fillColor('#000000');
+    doc.text(this.formatCurrency(afterDiscount, quotation.currency), tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
+    doc.rect(tableX, y, tableWidth, 14).stroke('#D0D0D0');
+    y += 14;
 
-    // Margin row
+    // Margin row (always show)
     const marginPercent = parseFloat(quotation.margin_percent || 0);
     const marginAmount = afterDiscount * (marginPercent / 100);
     const afterMargin = afterDiscount + marginAmount;
 
-    if (marginPercent > 0) {
-      doc.rect(tableX, y, tableWidth, 14).fill('#FFFFFF');
-      doc.fontSize(8.5).font('Helvetica').fillColor('#333333');
-      doc.text(`Add: Margin (${marginPercent.toFixed(1)}%)`, tableX + 10, y + 4, { width: colWidths[0] - 20 });
-      doc.fillColor('#006600');
-      doc.text(`+ ${this.formatCurrency(marginAmount, quotation.currency)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
-      doc.rect(tableX, y, tableWidth, 14).stroke('#E0E0E0');
-      y += 14;
+    doc.rect(tableX, y, tableWidth, 14).fill('#FFFFFF');
+    doc.fontSize(8.5).font('Helvetica').fillColor('#333333');
+    doc.text(`Add: Margin (${marginPercent.toFixed(1)}%)`, tableX + 10, y + 4, { width: colWidths[0] - 20 });
+    doc.fillColor('#006600');
+    doc.text(`+ ${this.formatCurrency(marginAmount, quotation.currency)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
+    doc.rect(tableX, y, tableWidth, 14).stroke('#E0E0E0');
+    y += 14;
 
-      // After margin row
-      doc.rect(tableX, y, tableWidth, 14).fill('#F8F9FA');
-      doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#333333');
-      doc.text('= After Margin', tableX + 10, y + 4, { width: colWidths[0] - 20 });
-      doc.fillColor('#000000');
-      doc.text(this.formatCurrency(afterMargin, quotation.currency), tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
-      doc.rect(tableX, y, tableWidth, 14).stroke('#D0D0D0');
-      y += 14;
-    }
+    // After margin row
+    doc.rect(tableX, y, tableWidth, 14).fill('#F8F9FA');
+    doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#333333');
+    doc.text('= After Margin', tableX + 10, y + 4, { width: colWidths[0] - 20 });
+    doc.fillColor('#000000');
+    doc.text(this.formatCurrency(afterMargin, quotation.currency), tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
+    doc.rect(tableX, y, tableWidth, 14).stroke('#D0D0D0');
+    y += 14;
 
-    // VAT row
+    // VAT row (always show)
     const vatPercent = parseFloat(quotation.vat_percent || 0);
     const vatAmount = afterMargin * (vatPercent / 100);
     const finalTotal = afterMargin + vatAmount;
 
-    if (vatPercent > 0) {
-      doc.rect(tableX, y, tableWidth, 14).fill('#FFFFFF');
-      doc.fontSize(8.5).font('Helvetica').fillColor('#333333');
-      doc.text(`Add: VAT/Tax (${vatPercent.toFixed(1)}%)`, tableX + 10, y + 4, { width: colWidths[0] - 20 });
-      doc.fillColor('#006600');
-      doc.text(`+ ${this.formatCurrency(vatAmount, quotation.currency)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
-      doc.rect(tableX, y, tableWidth, 14).stroke('#E0E0E0');
-      y += 14;
-    }
+    doc.rect(tableX, y, tableWidth, 14).fill('#FFFFFF');
+    doc.fontSize(8.5).font('Helvetica').fillColor('#333333');
+    doc.text(`Add: VAT/Tax (${vatPercent.toFixed(1)}%)`, tableX + 10, y + 4, { width: colWidths[0] - 20 });
+    doc.fillColor('#006600');
+    doc.text(`+ ${this.formatCurrency(vatAmount, quotation.currency)}`, tableX + colWidths[0] + 10, y + 4, { width: colWidths[1] - 20, align: 'right' });
+    doc.rect(tableX, y, tableWidth, 14).stroke('#E0E0E0');
+    y += 14;
 
     // FINAL TOTAL - Emphasized row
     doc.rect(tableX, y, tableWidth, 20).fill('#38761D');
