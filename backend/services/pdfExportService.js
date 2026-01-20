@@ -44,25 +44,27 @@ class PDFExportService {
         const lightGray = '#F3F3F3';
         const darkGray = '#666666';
         const borderGray = '#D0D0D0';
-
         const leftColumn = 70.87;
 
+        // Track Y position dynamically
+        let currentY = 70.87;
+
         // Add all sections with enhanced design
-        this.addEnhancedHeader(doc, quotation, brandBlue, darkGray, borderGray);
-        this.addCustomerInfoBox(doc, quotation, brandBlue, lightGray, borderGray, leftColumn);
-        this.addQuotationDetailsGrid(doc, quotation, brandBlue, borderGray, leftColumn);
-        this.addPartsTableStructured(doc, quotation, brandBlue, lightGray, borderGray, leftColumn);
+        currentY = this.addEnhancedHeader(doc, quotation, brandBlue, darkGray, borderGray, currentY);
+        currentY = this.addCustomerInfoBox(doc, quotation, brandBlue, lightGray, borderGray, leftColumn, currentY);
+        currentY = this.addQuotationDetailsGrid(doc, quotation, brandBlue, borderGray, leftColumn, currentY);
+        currentY = this.addPartsTableStructured(doc, quotation, brandBlue, lightGray, borderGray, leftColumn, currentY);
 
         // --- Add Other Costs Section ---
         if (quotation.other_costs && quotation.other_costs.length > 0) {
-          let y = doc.y + 10;
+          let y = currentY + 8;
           if (y > 600) {
             doc.addPage();
             y = 70.87;
           }
-          doc.fontSize(12).font('Helvetica-Bold').fillColor(brandBlue)
+          doc.fontSize(11).font('Helvetica-Bold').fillColor(brandBlue)
             .text('OTHER COSTS', leftColumn, y);
-          y += 20;
+          y += 16;
 
           // Table header (no Description column)
           const tableWidth = 453.26;
@@ -92,15 +94,15 @@ class PDFExportService {
             doc.text(this.formatCurrency(rate, quotation.currency), colX[2] + 3, y + 5, { width: colWidths[2] - 6, align: 'right' });
             doc.font('Helvetica-Bold').text(this.formatCurrency(total, quotation.currency), colX[3] + 3, y + 5, { width: colWidths[3] - 6, align: 'right' });
             doc.font('Helvetica');
-            doc.rect(leftColumn, y, tableWidth, 20).stroke(borderGray);
-            y += 20;
+            doc.rect(leftColumn, y, tableWidth, 18).stroke(borderGray);
+            y += 18;
           });
 
-          doc.moveDown(2);
+          currentY = y + 8;
         }
 
-        this.addFinancialSummaryEnhanced(doc, quotation, brandBlue, accentGreen, lightGray, borderGray, leftColumn);
-        this.addSignatureSectionEnhanced(doc, leftColumn, brandBlue, borderGray);
+        currentY = this.addFinancialSummaryEnhanced(doc, quotation, brandBlue, accentGreen, lightGray, borderGray, leftColumn, currentY);
+        this.addSignatureSectionEnhanced(doc, leftColumn, brandBlue, borderGray, currentY);
 
         // Finalize
         doc.end();
@@ -113,134 +115,120 @@ class PDFExportService {
     });
   }
 
-  // Enhanced two-column header
-  static addEnhancedHeader(doc, quotation, brandColor, darkGray, borderGray) {
+  // Enhanced two-column header - returns new Y position
+  static addEnhancedHeader(doc, quotation, brandColor, darkGray, borderGray, startY) {
     const leftX = 70.87;
-    let y = 70.87;
+    let y = startY;
 
     // Company Branding at top
     doc.fontSize(20).font('Helvetica-Bold').fillColor(brandColor)
        .text('DILMAH CNC MANUFACTURING', leftX, y);
-    
     y += 25;
+
     doc.fontSize(8).font('Helvetica').fillColor(darkGray)
        .text('Confidential – For Internal Engineering, Costing, and Management Review Only', leftX, y);
-    
-    y += 14;
+    y += 12;
+
     doc.fontSize(8).font('Helvetica').fillColor(darkGray)
        .text('Dilmah CNC Manufacturing & Engineering Innovations', leftX, y);
-
-    y += 20;
+    y += 16;
 
     // Quote Number box below company info
-    const boxY = y;
-    const boxWidth = 250;
-    const boxHeight = 70;
-
-    // Box with subtle border
-    doc.rect(leftX, boxY, boxWidth, boxHeight)
-       .fillAndStroke('#FAFAFA', borderGray);
+    const boxHeight = 60;
+    doc.rect(leftX, y, 250, boxHeight).fillAndStroke('#FAFAFA', borderGray);
 
     // Quote number and date in single row layout
     doc.fontSize(9).font('Helvetica').fillColor('#333333')
-       .text('Quote Number', leftX + 10, boxY + 10);
-    
+       .text('Quote Number', leftX + 10, y + 8);
     doc.fontSize(14).font('Helvetica-Bold').fillColor(brandColor)
-       .text(quotation.quote_number, leftX + 10, boxY + 25);
+       .text(quotation.quote_number, leftX + 10, y + 22);
 
-    // Date on same line
     doc.fontSize(9).font('Helvetica').fillColor('#333333')
-       .text('Date', leftX + 140, boxY + 10);
-    
+       .text('Date', leftX + 140, y + 8);
     doc.fontSize(10).fillColor('#000000')
-       .text(new Date(quotation.quotation_date).toLocaleDateString(), leftX + 140, boxY + 25);
+       .text(new Date(quotation.quotation_date).toLocaleDateString(), leftX + 140, y + 22);
 
-    // Status badge at bottom of box
+    // Status badge
     const statusColors = {
       'Draft': '#6c757d',
       'Submitted': '#0288D1',
       'Approved': '#388E3C',
       'Rejected': '#D32F2F'
     };
-    
     doc.fontSize(8).fillColor(statusColors[quotation.quotation_status] || '#6c757d')
-       .text(`Status: ${quotation.quotation_status}`, leftX + 10, boxY + 50);
+       .text(`Status: ${quotation.quotation_status}`, leftX + 10, y + 42);
 
-    doc.moveDown(3);
+    return y + boxHeight + 15; // Return next Y position
   }
 
-  // Customer information - bordered box with grid
-  static addCustomerInfoBox(doc, quotation, brandColor, lightGray, borderGray, leftX) {
-    let y = 200;
+  // Customer information - bordered box with grid - returns new Y position
+  static addCustomerInfoBox(doc, quotation, brandColor, lightGray, borderGray, leftX, startY) {
+    let y = startY;
     const boxWidth = 453.26;
-    const boxHeight = 110;
+    const boxHeight = 85;
 
     // Section header
-    doc.fontSize(12).font('Helvetica-Bold').fillColor(brandColor)
+    doc.fontSize(11).font('Helvetica-Bold').fillColor(brandColor)
        .text('CUSTOMER INFORMATION', leftX, y);
-    
-    y += 20;
+    y += 16;
 
     // Light bordered box
-    doc.rect(leftX, y, boxWidth, boxHeight)
-       .fillAndStroke(lightGray, borderGray);
+    doc.rect(leftX, y, boxWidth, boxHeight).fillAndStroke(lightGray, borderGray);
 
     // Two-column grid layout
-    y += 12;
-    const labelX = leftX + 15;
-    const valueX = leftX + 140;
+    const boxTop = y;
+    y += 10;
+    const labelX = leftX + 12;
+    const valueX = leftX + 120;
     const col2LabelX = leftX + 250;
-    const col2ValueX = leftX + 350;
+    const col2ValueX = leftX + 340;
 
-    doc.fontSize(9).font('Helvetica').fillColor('#666666');
+    doc.fontSize(8).font('Helvetica').fillColor('#666666');
 
     // Row 1
     doc.text('Company', labelX, y);
     doc.font('Helvetica-Bold').fillColor('#000000').text(quotation.company_name || 'N/A', valueX, y);
     
-    doc.font('Helvetica').fillColor('#666666').text('Contact Person', col2LabelX, y);
+    doc.font('Helvetica').fillColor('#666666').text('Contact', col2LabelX, y);
     doc.font('Helvetica-Bold').fillColor('#000000').text(quotation.contact_person_name || 'N/A', col2ValueX, y);
 
     // Row 2
-    y += 22;
+    y += 18;
     doc.font('Helvetica').fillColor('#666666').text('Email', labelX, y);
     doc.font('Helvetica-Bold').fillColor('#000000').text(quotation.email || 'N/A', valueX, y);
-    
     doc.font('Helvetica').fillColor('#666666').text('Phone', col2LabelX, y);
     doc.font('Helvetica-Bold').fillColor('#000000').text(quotation.phone || 'N/A', col2ValueX, y);
 
     // Row 3
-    y += 22;
+    y += 18;
     doc.font('Helvetica').fillColor('#666666').text('Quote Date', labelX, y);
     doc.font('Helvetica-Bold').fillColor('#000000')
        .text(new Date(quotation.quotation_date).toLocaleDateString(), valueX, y);
-    
     if (quotation.address) {
       doc.font('Helvetica').fillColor('#666666').text('Address', col2LabelX, y);
       doc.font('Helvetica').fillColor('#000000')
-         .text(quotation.address.substring(0, 30), col2ValueX, y, { width: 100 });
+         .text(quotation.address.substring(0, 25), col2ValueX, y, { width: 100 });
     }
 
-    doc.moveDown(3);
+    return boxTop + boxHeight + 12; // Return next Y position
   }
 
-  // Quotation details - 2x2 grid
-  static addQuotationDetailsGrid(doc, quotation, brandColor, borderGray, leftX) {
-    let y = 345;
+  // Quotation details - 2x2 grid - returns new Y position
+  static addQuotationDetailsGrid(doc, quotation, brandColor, borderGray, leftX, startY) {
+    let y = startY;
 
     // Section header
-    doc.fontSize(12).font('Helvetica-Bold').fillColor(brandColor)
+    doc.fontSize(11).font('Helvetica-Bold').fillColor(brandColor)
        .text('QUOTATION DETAILS', leftX, y);
-    
-    y += 22;
+    y += 16;
 
-    doc.fontSize(9).font('Helvetica').fillColor('#666666');
+    doc.fontSize(8).font('Helvetica').fillColor('#666666');
 
     // Grid layout - 2x2
     const labelX1 = leftX;
-    const valueX1 = leftX + 90;
+    const valueX1 = leftX + 85;
     const labelX2 = leftX + 250;
-    const valueX2 = leftX + 340;
+    const valueX2 = leftX + 335;
 
     // Row 1: Currency | Lead Time
     doc.text('Currency', labelX1, y);
@@ -250,32 +238,30 @@ class PDFExportService {
     doc.font('Helvetica-Bold').fillColor('#000000').text(quotation.lead_time || 'N/A', valueX2, y);
 
     // Row 2: Payment Terms | Shipment Type
-    y += 18;
+    y += 14;
     doc.font('Helvetica').fillColor('#666666').text('Payment Terms', labelX1, y);
     doc.font('Helvetica-Bold').fillColor('#000000').text(quotation.payment_terms || 'N/A', valueX1, y);
-    
     doc.font('Helvetica').fillColor('#666666').text('Shipment Type', labelX2, y);
     doc.font('Helvetica-Bold').fillColor('#000000').text(quotation.shipment_type || 'N/A', valueX2, y);
 
     // Horizontal separator
-    y += 22;
+    y += 16;
     doc.strokeColor(borderGray).lineWidth(0.5)
        .moveTo(leftX, y)
        .lineTo(leftX + 453.26, y)
        .stroke();
 
-    doc.moveDown(2);
+    return y + 12; // Return next Y position
   }
 
-  // Parts table - structured professional layout
-  static addPartsTableStructured(doc, quotation, brandColor, lightGray, borderGray, leftColumn) {
-    let y = 440;
+  // Parts table - structured professional layout - returns new Y position
+  static addPartsTableStructured(doc, quotation, brandColor, lightGray, borderGray, leftColumn, startY) {
+    let y = startY;
 
     // Section header
-    doc.fontSize(12).font('Helvetica-Bold').fillColor(brandColor)
+    doc.fontSize(11).font('Helvetica-Bold').fillColor(brandColor)
        .text('PARTS & OPERATIONS', leftColumn, y);
-    
-    y += 22;
+    y += 16;
 
     if (quotation.parts && quotation.parts.length > 0) {
       quotation.parts.forEach((part, index) => {
@@ -447,28 +433,27 @@ class PDFExportService {
           y += 16;
         }
 
-        y += 15;
+        y += 10;
       });
     }
 
-    doc.moveDown(2);
+    return y + 8; // Return next Y position
   }
 
-  // Financial summary - transparent step-by-step cost buildup table
-  static addFinancialSummaryEnhanced(doc, quotation, brandColor, accentColor, lightGray, borderGray, leftColumn) {
+  // Financial summary - transparent step-by-step cost buildup table - returns new Y position
+  static addFinancialSummaryEnhanced(doc, quotation, brandColor, accentColor, lightGray, borderGray, leftColumn, startY) {
+    let y = startY;
+
     // Check if we need a new page
-    if (doc.y > 600) {
+    if (y > 600) {
       doc.addPage();
+      y = 70.87;
     }
 
-    let y = doc.y + 20;
-
     // Section header
-    doc.fontSize(12).font('Helvetica-Bold').fillColor(brandColor)
-       .text('💰 COST BUILDUP & FINANCIAL SUMMARY', leftColumn, y);
-    
-    y += 22;
-
+    doc.fontSize(11).font('Helvetica-Bold').fillColor(brandColor)
+       .text('COST BUILDUP & FINANCIAL SUMMARY', leftColumn, y);
+    y += 16;
 
     // Calculate component totals from database values
     const subtotal = parseFloat(quotation.subtotal || 0);
@@ -579,26 +564,25 @@ class PDFExportService {
     doc.fontSize(12);
     doc.text(this.formatCurrency(finalTotal, quotation.currency), tableX + colWidths[0] + 10, y + 6, { width: colWidths[1] - 20, align: 'right' });
     doc.rect(tableX, y, tableWidth, 20).stroke('#38761D');
+    y += 20;
 
-    doc.moveDown(3);
+    return y + 15; // Return next Y position
   }
 
-  // Enhanced signature section
-  static addSignatureSectionEnhanced(doc, leftColumn, brandColor, borderGray) {
+  // Enhanced signature section - accepts starting Y position
+  static addSignatureSectionEnhanced(doc, leftColumn, brandColor, borderGray, startY) {
+    let y = startY;
+
     // Check if we need a new page for signatures
-    if (doc.y > 620) {
+    if (y > 680) {
       doc.addPage();
-    } else {
-      doc.moveDown(3);
+      y = 70.87;
     }
 
-    let y = doc.y;
-
     // Section header
-    doc.fontSize(12).font('Helvetica-Bold').fillColor(brandColor)
+    doc.fontSize(11).font('Helvetica-Bold').fillColor(brandColor)
        .text('APPROVAL & AUTHORIZATION', leftColumn, y);
-
-    y += 30;
+    y += 20;
 
     // Define three signature blocks
     const approvers = [
@@ -620,21 +604,19 @@ class PDFExportService {
       doc.fillColor('#000000').font('Helvetica');
 
       // Signature line (thin, professional)
-      doc.fontSize(8).fillColor('#666666').text('Signature:', xPos, y + 35);
+      doc.fontSize(8).fillColor('#666666').text('Signature:', xPos, y + 25);
       doc.strokeColor(borderGray).lineWidth(0.5)
-         .moveTo(xPos, y + 55)
-         .lineTo(xPos + columnWidth - 15, y + 55)
+         .moveTo(xPos, y + 40)
+         .lineTo(xPos + columnWidth - 15, y + 40)
          .stroke();
 
       // Date line
-      doc.fontSize(8).text('Date:', xPos, y + 65);
+      doc.fontSize(8).text('Date:', xPos, y + 50);
       doc.strokeColor(borderGray).lineWidth(0.5)
-         .moveTo(xPos, y + 85)
-         .lineTo(xPos + columnWidth - 15, y + 85)
+         .moveTo(xPos, y + 65)
+         .lineTo(xPos + columnWidth - 15, y + 65)
          .stroke();
     });
-
-    doc.moveDown(8);
   }
 }
 
